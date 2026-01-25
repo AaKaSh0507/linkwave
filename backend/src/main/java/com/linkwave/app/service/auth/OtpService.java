@@ -107,10 +107,56 @@ public class OtpService {
     }
 
     /**
+     * Verify OTP for a phone number.
+     * Checks correctness, expiration, and enforces single-use behavior.
+     * 
+     * @param phoneNumber the phone number to verify OTP for
+     * @param otp the OTP code to verify
+     * @return true if OTP is valid and not expired
+     * @throws OtpVerificationException if OTP is invalid, expired, or not found
+     */
+    public boolean verifyOtp(String phoneNumber, String otp) {
+        OtpMetadata metadata = otpStore.get(phoneNumber);
+        
+        if (metadata == null) {
+            throw new OtpVerificationException("No OTP found for this phone number");
+        }
+        
+        // Check if expired
+        if (metadata.isExpired()) {
+            otpStore.remove(phoneNumber); // Clean up expired OTP
+            throw new OtpVerificationException("OTP has expired");
+        }
+        
+        // Check if OTP matches
+        if (!metadata.getOtpValue().equals(otp)) {
+            throw new OtpVerificationException("Invalid OTP");
+        }
+        
+        // Consume the OTP (single-use)
+        otpStore.remove(phoneNumber);
+        
+        return true;
+    }
+
+    /**
      * Exception thrown when OTP throttle limit is exceeded.
      */
     public static class OtpThrottleException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        
         public OtpThrottleException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * Exception thrown when OTP verification fails.
+     */
+    public static class OtpVerificationException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        
+        public OtpVerificationException(String message) {
             super(message);
         }
     }

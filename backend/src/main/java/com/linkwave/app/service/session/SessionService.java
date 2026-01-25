@@ -1,9 +1,12 @@
 package com.linkwave.app.service.session;
 
 import com.linkwave.app.config.RedisConfig;
+import com.linkwave.app.domain.auth.AuthenticatedUserContext;
 import com.linkwave.app.domain.session.SessionMetadata;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -17,6 +20,8 @@ import java.util.Optional;
  */
 @Service
 public class SessionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SessionService.class);
 
     private final RedisConfig redisConfig;
 
@@ -113,6 +118,64 @@ public class SessionService {
         if (session != null) {
             session.invalidate();
         }
+    }
+
+    /**
+     * Authenticate the current session with user identity.
+     * Stores authenticated flag, phone number, and timestamp in session.
+     * 
+     * @param phoneNumber the verified phone number
+     * @return authenticated user context
+     */
+    public AuthenticatedUserContext authenticateSession(String phoneNumber) {
+        HttpSession session = getCurrentSession(true);
+        
+        Instant now = Instant.now();
+        
+        session.setAttribute("authenticated", true);
+        session.setAttribute("phoneNumber", phoneNumber);
+        session.setAttribute("authenticatedAt", now.toEpochMilli());
+        
+        AuthenticatedUserContext context = new AuthenticatedUserContext(phoneNumber, now);
+        
+        log.info("Session authenticated for phone: {}", context.getMaskedPhoneNumber());
+        
+        return context;
+    }
+
+    /**
+     * Check if current session is authenticated.
+     * 
+     * @return true if session has authenticated flag set
+     */
+    public boolean isAuthenticated() {
+        return getSessionAttribute("authenticated")
+            .filter(attr -> attr instanceof Boolean)
+            .map(attr -> (Boolean) attr)
+            .orElse(false);
+    }
+
+    /**
+     * Get authenticated user context from session.
+     * 
+     * @return optional authenticated user context
+     */
+    public Optional<AuthenticatedUserContext> getAuthenticatedUser() {
+        if (!isAuthenticated()) {
+            return Optional.empty();
+        }
+        
+        Optional<Object> phoneNumberOpt = getSessionAttribute("phoneNumber");
+        Optional<Object> authenticatedAtOpt = getSessionAttribute("authenticatedAt");
+        
+        if (phoneNumberOpt.isEmpty() || authenticatedAtOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        String phoneNumber = (String) phoneNumberOpt.get();
+        Instant authenticatedAt = Instant.ofEpochMilli((Long) authenticatedAtOpt.get());
+        
+        return Optional.of(new AuthenticatedUserContext(phoneNumber, authenticatedAt));
     }
 
     /**

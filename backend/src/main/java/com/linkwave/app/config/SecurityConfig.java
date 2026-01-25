@@ -23,7 +23,7 @@ public class SecurityConfig {
             // CSRF Configuration
             .csrf(csrf -> csrf
                 // Disable CSRF for OTP endpoints (email-only flow, no browser form submission)
-                .ignoringRequestMatchers("/api/v1/auth/request-otp")
+                .ignoringRequestMatchers("/api/v1/auth/request-otp", "/api/v1/auth/verify-otp")
                 // Enable CSRF for all other POST endpoints
             )
             
@@ -36,10 +36,16 @@ public class SecurityConfig {
                 .maxSessionsPreventsLogin(false)
             )
             
-            // Authorization Rules (all public for now)
+            // Authorization Rules
             .authorizeHttpRequests(auth -> auth
+                // Public authentication endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                // Public health check
                 .requestMatchers("/actuator/health").permitAll()
+                // Protected user endpoints (future) - require authenticated session
+                // .requestMatchers("/api/v1/user/**").authenticated()
+                // .requestMatchers("/api/v1/chat/**").authenticated()
+                // All other requests require authentication
                 .anyRequest().authenticated()
             );
         

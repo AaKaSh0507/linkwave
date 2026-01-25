@@ -1,8 +1,12 @@
 package com.linkwave.app.controller.auth;
 
+import com.linkwave.app.domain.auth.AuthenticatedUserContext;
 import com.linkwave.app.domain.auth.OtpRequestPayload;
+import com.linkwave.app.domain.auth.VerificationRequestPayload;
+import com.linkwave.app.domain.auth.VerificationResponsePayload;
 import com.linkwave.app.service.auth.EmailService;
 import com.linkwave.app.service.auth.OtpService;
+import com.linkwave.app.service.session.SessionService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +28,11 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final OtpService otpService;
+    private final SessionService sessionService;
 
-    public AuthController(OtpService otpService) {
+    public AuthController(OtpService otpService, SessionService sessionService) {
         this.otpService = otpService;
+        this.sessionService = sessionService;
     }
 
     /**
@@ -44,6 +50,29 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
             "message", "OTP sent successfully"
         ));
+    }
+
+    /**
+     * Verify OTP and authenticate session.
+     * 
+     * @param payload the request payload containing phone number and OTP
+     * @return verification response with authentication status
+     */
+    @PostMapping("/verify-otp")
+    public ResponseEntity<VerificationResponsePayload> verifyOtp(
+            @Valid @RequestBody VerificationRequestPayload payload) {
+        
+        // Verify OTP
+        otpService.verifyOtp(payload.getPhoneNumber(), payload.getOtp());
+        
+        // Authenticate session
+        AuthenticatedUserContext userContext = sessionService.authenticateSession(payload.getPhoneNumber());
+        
+        log.info("User authenticated: {}", userContext.getMaskedPhoneNumber());
+        
+        return ResponseEntity.ok(
+            new VerificationResponsePayload(true, "Authentication successful")
+        );
     }
 
     /**
@@ -68,5 +97,18 @@ public class AuthController {
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(Map.of("error", "Failed to send OTP. Please try again later."));
+    }
+
+    /**
+     * Exception handler for OTP verification failures.
+     */
+    @ExceptionHandler(OtpService.OtpVerificationException.class)
+    public ResponseEntity<Map<String, String>> handleVerificationException(
+            OtpService.OtpVerificationException ex) {
+        
+        log.warn("OTP verification failed: {}", ex.getMessage());
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("error", ex.getMessage()));
     }
 }
