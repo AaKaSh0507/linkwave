@@ -19,6 +19,7 @@ import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -238,5 +239,33 @@ class AuthControllerTest {
 
         verify(otpService, never()).verifyOtp(anyString(), anyString());
         verify(sessionService, never()).authenticateSession(anyString());
+    }
+
+    // ===== Logout Endpoint Tests =====
+
+    @Test
+    void logout_shouldInvalidateSession() throws Exception {
+        doNothing().when(sessionService).invalidateSession();
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Logged out successfully"));
+
+        verify(sessionService, times(1)).invalidateSession();
+    }
+
+    @Test
+    void logout_shouldReturnSuccessEvenWithoutActiveSession() throws Exception {
+        doNothing().when(sessionService).invalidateSession();
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+
+        verify(sessionService, times(1)).invalidateSession();
     }
 }

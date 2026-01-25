@@ -76,6 +76,42 @@ public class AuthController {
     }
 
     /**
+     * Get CSRF token for authenticated requests.
+     * Token is automatically set in XSRF-TOKEN cookie by Spring Security.
+     * 
+     * @param token the CSRF token (injected by Spring)
+     * @return CSRF token value
+     */
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> getCsrfToken(
+            org.springframework.security.web.csrf.CsrfToken token) {
+        
+        if (token == null) {
+            return ResponseEntity.ok(Map.of("message", "CSRF protection disabled"));
+        }
+        
+        return ResponseEntity.ok(Map.of(
+            "token", token.getToken(),
+            "headerName", token.getHeaderName(),
+            "parameterName", token.getParameterName()
+        ));
+    }
+
+    /**
+     * Logout endpoint - invalidates current session.
+     * 
+     * @return success response
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout() {
+        sessionService.invalidateSession();
+        
+        log.info("User logged out successfully");
+        
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+    /**
      * Exception handler for throttle violations.
      */
     @ExceptionHandler(OtpService.OtpThrottleException.class)
