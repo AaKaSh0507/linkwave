@@ -44,6 +44,19 @@ spring:
       namespace: ${SESSION_NAMESPACE:linkwave:session:}
       flush-mode: on_save
       cleanup-cron: "0 * * * * *"
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:linkwave-chat-delivery}
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+    producer:
+      acks: all
+      retries: 2147483647
+    properties:
+      spring.json.trusted.packages: com.linkwave.app.domain.chat
 
 # Server Configuration
 server:

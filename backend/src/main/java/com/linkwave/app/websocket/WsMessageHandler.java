@@ -2,7 +2,9 @@ package com.linkwave.app.websocket;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.linkwave.app.domain.chat.ChatEvent;
 import com.linkwave.app.domain.websocket.WsMessageEnvelope;
+import com.linkwave.app.service.kafka.ChatEventProducer;
 import com.linkwave.app.service.session.SessionService;
 import com.linkwave.app.service.websocket.WsSessionManager;
 import org.slf4j.Logger;
@@ -18,9 +20,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
  * Handles connection lifecycle, message routing, and application protocol.
  * 
  * Phase C1: Direct WebSocket gateway with session-based auth
- * - No Kafka integration yet
- * - No message persistence yet
+ * Phase C2: Kafka integration for chat event publishing
  * - Validates and routes messages according to envelope protocol
+ * - Publishes chat events to Kafka
+ * - No message persistence or delivery yet
  */
 @Component
 public class WsMessageHandler extends TextWebSocketHandler {
@@ -30,13 +33,16 @@ public class WsMessageHandler extends TextWebSocketHandler {
     private final WsSessionManager sessionManager;
     private final SessionService sessionService;
     private final ObjectMapper objectMapper;
+    private final ChatEventProducer chatEventProducer;
     
     public WsMessageHandler(WsSessionManager sessionManager, 
                            SessionService sessionService,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           ChatEventProducer chatEventProducer) {
         this.sessionManager = sessionManager;
         this.sessionService = sessionService;
         this.objectMapper = objectMapper;
+        this.chatEventProducer = chatEventProducer;
     }
     
     /**
@@ -168,30 +174,82 @@ public class WsMessageHandler extends TextWebSocketHandler {
     
     /**
      * Handle chat.send event.
-     * Phase C1: Accept and validate message, but don't deliver yet.
-     * Phase C2: Will integrate with Kafka for delivery.
+     * Phase C2: Validate, create ChatEvent, publish to Kafka, acknowledge.
+     * Phase C3: Will add delivery to recipient WebSocket.
      */
-    private void handleChatSend(WebSocketSession session, String phoneNumber, WsMessageEnvelope envelope) {
+    private void handleChatSend(WebSocketSession session, String phoneNumber, WsMessageEnvelope envelope) throws Exception {
         log.info("Received chat.send from user: {} to: {}", 
                  maskPhoneNumber(phoneNumber), 
                  envelope.getTo() != null ? maskPhoneNumber(envelope.getTo()) : "null");
         
-        // Basic validation
+        // Validate required fields
         if (envelope.getTo() == null || envelope.getTo().isBlank()) {
             log.warn("chat.send missing 'to' field from user: {}", maskPhoneNumber(phoneNumber));
+            session.close(new CloseStatus(1003, "Missing 'to' field"));
             return;
         }
         
         if (envelope.getPayload() == null) {
             log.warn("chat.send missing 'payload' field from user: {}", maskPhoneNumber(phoneNumber));
+            session.close(new CloseStatus(1003, "Missing 'payload' field"));
             return;
         }
         
-        // Phase C1: Message accepted but queued for later processing
-        // No delivery yet - will be implemented in C2 with Kafka
-        log.info("chat.send accepted from user: {} (not delivered in C1)", maskPhoneNumber(phoneNumber));
+        // Extract and validate message body
+        String body = extractMessageBody(envelope.getPayload());
+        if (body == null || body.isBlank()) {
+            log.warn("chat.send missing or empty 'body' in payload from user: {}", maskPhoneNumber(phoneNumber));
+            session.close(new CloseStatus(1003, "Missing or empty 'body' in payload"));
+            return;
+        }
         
-        // TODO C2: Send to Kafka topic for processing and delivery
+        // Create chat event
+        ChatEvent chatEvent = ChatEvent.create(phoneNumber, envelope.getTo(), body);
+        
+        // Publish to Kafka
+        chatEventProducer.publishChatEvent(chatEvent)
+            .whenComplete((result, ex) -> {
+                if (ex == null) {
+                    // Send acknowledgment to sender
+                    try {
+                        sendChatSentAck(session, chatEvent.getMessageId());
+                    } catch (Exception e) {
+                        log.error("Failed to send chat.sent acknowledgment: {}", e.getMessage());
+                    }
+                } else {
+                    log.error("Failed to publish chat event to Kafka: {}", ex.getMessage());
+                    // Note: In production, might want to notify sender of failure
+                }
+            });
+    }
+    
+    /**
+     * Extract message body from payload JSON.
+     */
+    private String extractMessageBody(JsonNode payload) {
+        if (payload == null) {
+            return null;
+        }
+        JsonNode bodyNode = payload.get("body");
+        if (bodyNode == null || !bodyNode.isTextual()) {
+            return null;
+        }
+        return bodyNode.asText();
+    }
+    
+    /**
+     * Send chat.sent acknowledgment to sender.
+     */
+    private void sendChatSentAck(WebSocketSession session, String messageId) throws Exception {
+        JsonNode ackPayload = objectMapper.createObjectNode()
+            .put("messageId", messageId);
+        
+        WsMessageEnvelope ackEnvelope = new WsMessageEnvelope("chat.sent", null, ackPayload);
+        String ackJson = objectMapper.writeValueAsString(ackEnvelope);
+        
+        session.sendMessage(new TextMessage(ackJson));
+        
+        log.debug("Sent chat.sent acknowledgment: messageId={}", messageId);
     }
     
     /**

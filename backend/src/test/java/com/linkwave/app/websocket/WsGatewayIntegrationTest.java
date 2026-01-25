@@ -146,8 +146,8 @@ class WsGatewayIntegrationTest {
         WebSocketSession session = client.execute(handler, new WebSocketHttpHeaders(), URI.create(wsUrl))
                 .get(5, TimeUnit.SECONDS);
         
-        // When: Send chat.send message
-        String chatPayload = "{\"text\":\"Hello World\"}";
+        // When: Send chat.send message with proper body field
+        String chatPayload = "{\"body\":\"Hello World\"}";
         WsMessageEnvelope chatSend = new WsMessageEnvelope(
             "chat.send", 
             "+14155559999", 
@@ -156,12 +156,19 @@ class WsGatewayIntegrationTest {
         String chatJson = objectMapper.writeValueAsString(chatSend);
         session.sendMessage(new TextMessage(chatJson));
         
-        // Then: Message accepted (no error, connection remains open)
-        Thread.sleep(500); // Give time for processing
+        // Then: Should receive chat.sent acknowledgment (C2 behavior)
+        String ackResponse = handler.messages.poll(2, TimeUnit.SECONDS);
+        if (ackResponse != null) {
+            WsMessageEnvelope ack = objectMapper.readValue(ackResponse, WsMessageEnvelope.class);
+            assertThat(ack.getEvent()).isEqualTo("chat.sent");
+            assertThat(ack.getPayload().has("messageId")).isTrue();
+        }
+        
+        // Connection should remain open
         assertThat(session.isOpen()).isTrue();
         
-        // Note: In C1, chat.send is accepted but not delivered
-        // C2 will implement Kafka integration for delivery
+        // Note: In C2, chat.send is published to Kafka and acknowledged
+        // C3 will add persistence, C4 will add delivery
         
         // Cleanup
         session.close();

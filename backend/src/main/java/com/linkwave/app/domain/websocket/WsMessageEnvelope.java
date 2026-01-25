@@ -66,7 +66,8 @@ public class WsMessageEnvelope {
     public enum EventType {
         PING("ping"),
         PONG("pong"),
-        CHAT_SEND("chat.send");
+        CHAT_SEND("chat.send"),
+        CHAT_SENT("chat.sent"); // Acknowledgment sent to client after Kafka publish
         
         private final String value;
         
