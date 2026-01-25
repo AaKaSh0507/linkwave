@@ -24,6 +24,23 @@ spring:
     user:
       name: admin
       password: changeme
+  
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: ${MAIL_TLS_ENABLED:true}
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 # Server Configuration
 server:
@@ -58,3 +75,22 @@ linkwave:
       
       # Throttle time window in seconds (default: 600 = 10 minutes)
       throttle-window-seconds: 600
+  
+  mail:
+    # SMTP server host
+    host: ${MAIL_HOST:}
+    
+    # SMTP server port
+    port: ${MAIL_PORT:587}
+    
+    # SMTP username
+    username: ${MAIL_USERNAME:}
+    
+    # SMTP password
+    password: ${MAIL_PASSWORD:}
+    
+    # From email address
+    from: ${MAIL_FROM:no-reply@linkwave.app}
+    
+    # Enable TLS
+    tls-enabled: ${MAIL_TLS_ENABLED:true}

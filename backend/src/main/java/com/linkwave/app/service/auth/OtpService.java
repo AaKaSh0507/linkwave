@@ -18,27 +18,31 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OtpService {
 
     private final AuthConfig authConfig;
+    private final EmailService emailService;
     private final SecureRandom secureRandom;
     
     // In-memory storage (to be replaced with Redis in future)
     private final Map<String, OtpMetadata> otpStore;
     private final Map<String, ThrottleMetadata> throttleStore;
 
-    public OtpService(AuthConfig authConfig) {
+    public OtpService(AuthConfig authConfig, EmailService emailService) {
         this.authConfig = authConfig;
+        this.emailService = emailService;
         this.secureRandom = new SecureRandom();
         this.otpStore = new ConcurrentHashMap<>();
         this.throttleStore = new ConcurrentHashMap<>();
     }
 
     /**
-     * Request OTP generation for a phone number.
+     * Request OTP generation for a phone number and send via email.
      * Validates throttle rules before generating.
      * 
-     * @param phoneNumber the phone number to generate OTP for
+     * @param phoneNumber the phone number to generate OTP for (used for throttling)
+     * @param email the email address to send OTP to
      * @throws OtpThrottleException if throttle limit is exceeded
+     * @throws EmailService.EmailDeliveryException if email sending fails
      */
-    public void requestOtp(String phoneNumber) {
+    public void requestOtp(String phoneNumber, String email) {
         validateThrottle(phoneNumber);
         
         String otpValue = generateOtp();
@@ -47,6 +51,9 @@ public class OtpService {
         
         OtpMetadata otpMetadata = new OtpMetadata(otpValue, now, expiresAt);
         otpStore.put(phoneNumber, otpMetadata);
+        
+        // Send OTP via email
+        emailService.sendOtpEmail(email, otpValue);
         
         // Record request for throttling
         recordRequest(phoneNumber, now);
