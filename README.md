@@ -47,6 +47,97 @@ Application will start on `http://localhost:3000`
 
 **Full instructions**: See [frontend/README.md](frontend/README.md)
 
+## CI/CD Pipeline
+
+Automated continuous integration and deployment workflows using GitHub Actions.
+
+### Workflows
+
+**Backend CI/CD** ([.github/workflows/backend-ci.yaml](.github/workflows/backend-ci.yaml)):
+- **Trigger**: Pull requests and pushes to `main` affecting `backend/` directory
+- **Build & Test Job**:
+  - Set up Java 21 (Temurin distribution)
+  - Cache Gradle dependencies
+  - Run `./gradlew build` and `./gradlew test`
+  - Generate JaCoCo test coverage report
+  - Upload build artifacts (JAR files)
+- **Build & Publish Job** (main branch only):
+  - Build multi-stage Docker image from [backend/Dockerfile](backend/Dockerfile)
+  - Push to GitHub Container Registry with tags:
+    - `latest` (main branch)
+    - `main-<commit-sha>` (7-character short SHA)
+  - Cache Docker layers for faster builds
+
+**Frontend CI/CD** ([.github/workflows/frontend-ci.yaml](.github/workflows/frontend-ci.yaml)):
+- **Trigger**: Pull requests and pushes to `main` affecting `frontend/` directory
+- **Build & Test Job**:
+  - Set up Node.js 20 LTS
+  - Cache npm dependencies
+  - Run `npm ci` for clean install
+  - Run `npm run build` (Vite production build)
+  - Upload build artifacts (dist/ directory)
+- **Build & Publish Job** (main branch only):
+  - Build production Nginx image from [frontend/Dockerfile](frontend/Dockerfile)
+  - Push to GitHub Container Registry with tags:
+    - `latest` (main branch)
+    - `main-<commit-sha>` (7-character short SHA)
+  - Cache Docker layers for faster builds
+
+### Container Registry
+
+**Images published to GitHub Container Registry (GHCR)**:
+- Backend: `ghcr.io/aakashk0507/linkwave-backend:latest`
+- Frontend: `ghcr.io/aakashk0507/linkwave-frontend:latest`
+
+**Image naming convention**:
+- REST-friendly lowercase naming
+- Semantic tagging strategy: `latest` for production, commit SHA for traceability
+- Platform: `linux/amd64`
+
+### Authentication
+
+GitHub Actions uses `GITHUB_TOKEN` for GHCR authentication:
+- **Permissions**: Automatically granted `packages: write` permission
+- **Scope**: Repository-scoped, expires after workflow completes
+- **Security**: No manual secrets required; token injected by GitHub
+
+### Pulling Images
+
+**Public images** (after first push):
+```bash
+# Backend
+docker pull ghcr.io/aakashk0507/linkwave-backend:latest
+
+# Frontend
+docker pull ghcr.io/aakashk0507/linkwave-frontend:latest
+```
+
+**Authenticated pull** (for private repositories):
+```bash
+# Create personal access token with read:packages scope
+echo $GITHUB_PAT | docker login ghcr.io -u aakashk0507 --password-stdin
+
+# Pull images
+docker pull ghcr.io/aakashk0507/linkwave-backend:latest
+```
+
+### Workflow Status
+
+Check build status:
+- Visit [Actions tab](https://github.com/AaKaSh0507/linkwave/actions)
+- Backend CI: ![Backend CI](https://github.com/AaKaSh0507/linkwave/actions/workflows/backend-ci.yaml/badge.svg)
+- Frontend CI: ![Frontend CI](https://github.com/AaKaSh0507/linkwave/actions/workflows/frontend-ci.yaml/badge.svg)
+
+### Future Enhancements
+
+Planned CI/CD improvements (not yet implemented):
+- Automated deployment to Kubernetes cluster
+- Helm chart versioning and publishing
+- Integration testing with Docker Compose
+- Security scanning (Trivy, Snyk)
+- Release automation with semantic versioning
+- Multi-environment deployments (dev, staging, production)
+
 ## Technology Stack
 
 ### Backend
@@ -176,6 +267,77 @@ docker compose down
 
 For complete Docker setup documentation, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
+## Kubernetes Production Deployment
+
+Production-grade Kubernetes cluster setup with k3s, Traefik, and Let's Encrypt TLS:
+
+### Infrastructure Components
+- **k3s**: Lightweight Kubernetes distribution for single-node or multi-node clusters
+- **Traefik v2**: Modern HTTP reverse proxy and ingress controller (included with k3s)
+- **cert-manager**: Automated TLS certificate management with Let's Encrypt
+- **Namespace**: Dedicated `linkwave` namespace for application isolation
+
+### Kubernetes Manifests
+```
+k8s/
+├── namespace.yaml                      # Linkwave production namespace
+├── letsencrypt-staging-issuer.yaml     # Let's Encrypt staging (testing)
+├── letsencrypt-prod-issuer.yaml        # Let's Encrypt production (validated)
+└── ingress-examples.yaml               # Ingress templates for REST API, Frontend, WebSocket
+```
+
+### Quick Deployment
+
+**Prerequisites**:
+- Ubuntu 22.04 LTS VPS with public IP
+- Domain name with DNS management access
+- 2 CPU cores, 4GB RAM, 40GB disk minimum
+
+**Setup Steps**:
+```bash
+# 1. Install k3s with Traefik
+curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+
+# 2. Install cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
+
+# 3. Create namespace
+kubectl apply -f k8s/namespace.yaml
+
+# 4. Configure DNS A records
+# Point your domains to VPS IP:
+# - linkwave.example.com → your-server-ip
+# - api.linkwave.example.com → your-server-ip
+# - ws.linkwave.example.com → your-server-ip
+
+# 5. Deploy Let's Encrypt issuers
+kubectl apply -f k8s/letsencrypt-staging-issuer.yaml
+kubectl apply -f k8s/letsencrypt-prod-issuer.yaml
+
+# 6. Deploy ingress resources (after app workloads)
+kubectl apply -f k8s/ingress-examples.yaml
+```
+
+**Complete Setup Guide**: See [CLUSTER_SETUP.md](CLUSTER_SETUP.md) for comprehensive instructions including:
+- VPS provider recommendations (Hetzner, DigitalOcean, Linode)
+- Server initial setup and firewall configuration
+- k3s installation and verification
+- cert-manager installation
+- DNS configuration examples
+- TLS certificate testing procedures
+- Troubleshooting common issues
+- Cluster management commands
+
+### Ingress Routes
+
+| Service | Domain | Purpose |
+|---------|--------|---------|
+| Frontend | `https://linkwave.example.com` | Vue.js static assets |
+| Backend API | `https://api.linkwave.example.com` | Spring Boot REST API |
+| WebSocket | `wss://ws.linkwave.example.com/ws` | Realtime chat connections |
+
+**Note**: Replace `example.com` with your actual domain in all manifest files before deployment.
+
 ## Java Version Management
 - Java 21 is required for building the backend
 - Java 21 and Java 25 can coexist on the same system
@@ -217,3 +379,5 @@ Proprietary - Linkwave Project
 For detailed instructions on each component, refer to the respective README files:
 - [Backend Documentation](backend/README.md)
 - [Frontend Documentation](frontend/README.md)
+- [Docker Setup Guide](DOCKER_SETUP.md)
+- [Kubernetes Cluster Setup](CLUSTER_SETUP.md)

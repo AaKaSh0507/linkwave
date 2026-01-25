@@ -17,6 +17,9 @@
 tmp/
 temp/
 
+# Documentation artifacts
+*.pdf
+
 # Environment variables
 .env
 .env.local

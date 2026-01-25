@@ -1,0 +1,116 @@
+---
+# Ingress Template for Linkwave Backend (REST API)
+# This template routes HTTP/HTTPS traffic to the backend service
+# Usage: Deploy this after creating backend Deployment and Service
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkwave-backend-ingress
+  namespace: linkwave
+  annotations:
+    # Use Traefik as the ingress controller
+    kubernetes.io/ingress.class: traefik
+    
+    # TLS Certificate issuer (use letsencrypt-staging for testing, letsencrypt-prod for production)
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    
+    # Redirect HTTP to HTTPS
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+    
+    # Optional: Rate limiting
+    traefik.ingress.kubernetes.io/rate-limit: |
+      extractorfunc: client.ip
+      rateset:
+        default:
+          period: 1s
+          average: 100
+          burst: 200
+spec:
+  tls:
+    - hosts:
+        - api.linkwave.example.com
+      secretName: linkwave-backend-tls
+  rules:
+    - host: api.linkwave.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend-service
+                port:
+                  number: 8080
+
+---
+# Ingress Template for Linkwave Frontend (Static Assets)
+# This template routes HTTP/HTTPS traffic to the frontend service
+# Usage: Deploy this after creating frontend Deployment and Service
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkwave-frontend-ingress
+  namespace: linkwave
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+spec:
+  tls:
+    - hosts:
+        - linkwave.example.com
+      secretName: linkwave-frontend-tls
+  rules:
+    - host: linkwave.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-frontend-service
+                port:
+                  number: 80
+
+---
+# Ingress Template for WebSocket Support (Future Chat Realtime)
+# This template handles WebSocket connections for realtime messaging
+# Usage: Deploy this when implementing WebSocket support in backend
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkwave-websocket-ingress
+  namespace: linkwave
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    
+    # Enable WebSocket protocol upgrade
+    traefik.ingress.kubernetes.io/websocket: "true"
+    
+    # Increase timeout for long-lived connections
+    traefik.ingress.kubernetes.io/session-affinity: "true"
+    traefik.ingress.kubernetes.io/affinity: cookie
+    
+    # Optional: Custom timeouts for WebSocket
+    traefik.ingress.kubernetes.io/timeout: |
+      read: 3600s
+      write: 3600s
+spec:
+  tls:
+    - hosts:
+        - ws.linkwave.example.com
+      secretName: linkwave-websocket-tls
+  rules:
+    - host: ws.linkwave.example.com
+      http:
+        paths:
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend-service
+                port:
+                  number: 8080
