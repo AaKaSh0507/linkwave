@@ -108,6 +108,8 @@ public class EmailService {
      * Exception thrown when email delivery fails.
      */
     public static class EmailDeliveryException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        
         public EmailDeliveryException(String message, Throwable cause) {
             super(message, cause);
         }

@@ -41,6 +41,15 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+  
+  # Session Configuration
+  session:
+    store-type: redis
+    timeout: ${SESSION_TIMEOUT:30m}
+    redis:
+      namespace: ${SESSION_NAMESPACE:linkwave:session:}
+      flush-mode: on_save
+      cleanup-cron: "0 * * * * *"
 
 # Server Configuration
 server:
@@ -48,7 +57,13 @@ server:
   servlet:
     context-path: /
     session:
-      timeout: 30m
+      timeout: ${SESSION_TIMEOUT:30m}
+      cookie:
+        name: LINKWAVE_SESSION
+        http-only: true
+        secure: ${COOKIE_SECURE:false}
+        same-site: ${COOKIE_SAME_SITE:lax}
+        max-age: ${SESSION_TIMEOUT:30m}
 
 # Actuator Configuration
 management:
@@ -94,3 +109,19 @@ linkwave:
     
     # Enable TLS
     tls-enabled: ${MAIL_TLS_ENABLED:true}
+  
+  redis:
+    # Redis server host
+    host: ${REDIS_HOST:localhost}
+    
+    # Redis server port
+    port: ${REDIS_PORT:6379}
+    
+    # Redis password (optional)
+    password: ${REDIS_PASSWORD:}
+    
+    # Session timeout in minutes
+    session-timeout-minutes: ${SESSION_TIMEOUT_MINUTES:30}
+    
+    # Redis namespace prefix for session keys
+    namespace: ${SESSION_NAMESPACE:linkwave:session:}
