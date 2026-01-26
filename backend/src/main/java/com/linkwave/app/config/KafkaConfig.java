@@ -1,6 +1,6 @@
 package com.linkwave.app.config;
 
-import com.linkwave.app.domain.chat.ChatEvent;
+import com.linkwave.app.domain.chat.ChatMessage;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -11,8 +11,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.springframework.kafka.config.TopicBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +47,7 @@ public class KafkaConfig {
      * Idempotent producer enabled for exactly-once semantics.
      */
     @Bean
-    public ProducerFactory<String, ChatEvent> chatEventProducerFactory() {
+    public ProducerFactory<String, ChatMessage> chatMessageProducerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -64,8 +67,8 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, ChatEvent> chatEventKafkaTemplate() {
-        return new KafkaTemplate<>(chatEventProducerFactory());
+    public KafkaTemplate<String, ChatMessage> chatMessageKafkaTemplate() {
+        return new KafkaTemplate<>(chatMessageProducerFactory());
     }
 
     /**
@@ -73,7 +76,7 @@ public class KafkaConfig {
      * Consumer group for delivery pipeline (future C4).
      */
     @Bean
-    public ConsumerFactory<String, ChatEvent> chatEventConsumerFactory() {
+    public ConsumerFactory<String, ChatMessage> chatMessageConsumerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
@@ -82,7 +85,7 @@ public class KafkaConfig {
 
         // JsonDeserializer configuration
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.linkwave.app.domain.chat");
-        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ChatEvent.class.getName());
+        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ChatMessage.class.getName());
 
         // Consumer behavior
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -93,12 +96,12 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ChatEvent> chatEventKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, ChatEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(chatEventConsumerFactory());
+    public ConcurrentKafkaListenerContainerFactory<String, ChatMessage> chatMessageKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, ChatMessage> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(chatMessageConsumerFactory());
 
         // Error handling - log and continue (placeholder for DLQ in future)
-        factory.setCommonErrorHandler(new org.springframework.kafka.listener.DefaultErrorHandler());
+        factory.setCommonErrorHandler(new DefaultErrorHandler());
 
         return factory;
     }
@@ -109,8 +112,8 @@ public class KafkaConfig {
      * Replication: 1 (local dev)
      */
     @Bean
-    public org.apache.kafka.clients.admin.NewTopic chatEventsTopic() {
-        return org.springframework.kafka.config.TopicBuilder.name("linkwave.chat.events")
+    public NewTopic chatEventsTopic() {
+        return TopicBuilder.name("linkwave.chat.messages.v2")
                 .partitions(1)
                 .replicas(1)
                 .build();

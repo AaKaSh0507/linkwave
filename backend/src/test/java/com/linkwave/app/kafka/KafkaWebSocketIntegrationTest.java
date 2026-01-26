@@ -2,7 +2,7 @@ package com.linkwave.app.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkwave.app.domain.auth.AuthenticatedUserContext;
-import com.linkwave.app.domain.chat.ChatEvent;
+import com.linkwave.app.domain.chat.ChatMessage;
 import com.linkwave.app.domain.websocket.WsMessageEnvelope;
 import com.linkwave.app.service.session.SessionService;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -54,10 +54,11 @@ import static org.mockito.Mockito.when;
 // @Disabled("Embedded Kafka tests - enable manually for full integration
 // testing")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@EmbeddedKafka(partitions = 1, topics = { "linkwave.chat.events" })
+@EmbeddedKafka(partitions = 1, topics = { "linkwave.chat.messages.v2" })
 @org.springframework.test.context.TestPropertySource(properties = {
         "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
-        "spring.kafka.consumer.auto-offset-reset=earliest"
+        "spring.kafka.consumer.auto-offset-reset=earliest",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration"
 })
 @DirtiesContext
 class KafkaWebSocketIntegrationTest {
@@ -75,7 +76,7 @@ class KafkaWebSocketIntegrationTest {
     private ObjectMapper objectMapper;
 
     private String wsUrl;
-    private Consumer<String, ChatEvent> testConsumer;
+    private Consumer<String, ChatMessage> testConsumer;
 
     @BeforeEach
     void setUp() {
@@ -89,11 +90,11 @@ class KafkaWebSocketIntegrationTest {
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(JsonDeserializer.TRUSTED_PACKAGES, "com.linkwave.app.domain.chat");
-        consumerProps.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ChatEvent.class.getName());
+        consumerProps.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ChatMessage.class.getName());
 
-        testConsumer = new DefaultKafkaConsumerFactory<String, ChatEvent>(consumerProps)
+        testConsumer = new DefaultKafkaConsumerFactory<String, ChatMessage>(consumerProps)
                 .createConsumer();
-        testConsumer.subscribe(Collections.singletonList("linkwave.chat.events"));
+        testConsumer.subscribe(Collections.singletonList("linkwave.chat.messages.v2"));
     }
 
     @Test
@@ -133,20 +134,28 @@ class KafkaWebSocketIntegrationTest {
         assertThat(messageId).isNotBlank();
 
         // And: Event should be in Kafka
-        ConsumerRecords<String, ChatEvent> records = testConsumer.poll(Duration.ofSeconds(5));
-        assertThat(records.isEmpty()).isFalse();
+        // We might receive messages from other tests (shared topic), so we filter by
+        // messageId
+        boolean found = false;
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < 10000 && !found) {
+            ConsumerRecords<String, ChatMessage> records = testConsumer.poll(Duration.ofSeconds(1));
+            for (ConsumerRecord<String, ChatMessage> record : records) {
+                ChatMessage event = record.value();
+                if (event.getMessageId().equals(messageId)) {
+                    assertThat(event.getSenderPhoneNumber()).isEqualTo(senderPhone);
+                    assertThat(event.getRecipientPhoneNumber()).isEqualTo(recipientPhone);
+                    assertThat(event.getBody()).isEqualTo(messageBody);
+                    assertThat(event.getSentAt()).isGreaterThan(0);
 
-        ConsumerRecord<String, ChatEvent> record = records.iterator().next();
-        ChatEvent event = record.value();
-
-        assertThat(event.getMessageId()).isEqualTo(messageId);
-        assertThat(event.getSender()).isEqualTo(senderPhone);
-        assertThat(event.getRecipient()).isEqualTo(recipientPhone);
-        assertThat(event.getBody()).isEqualTo(messageBody);
-        assertThat(event.getTimestamp()).isGreaterThan(0);
-
-        // Verify partition key is recipient
-        assertThat(record.key()).isEqualTo(recipientPhone);
+                    // Verify partition key is recipient
+                    assertThat(record.key()).isEqualTo(recipientPhone);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assertThat(found).as("Did not find message with ID %s in Kafka", messageId).isTrue();
 
         // Cleanup
         session.close();
@@ -285,16 +294,25 @@ class KafkaWebSocketIntegrationTest {
         }
 
         // Then: All messages should be in Kafka
-        ConsumerRecords<String, ChatEvent> records = testConsumer.poll(Duration.ofSeconds(5));
-        assertThat(records.count()).isEqualTo(3);
-
-        // Verify all messages went to same partition (ordered by recipient)
-        Set<Integer> partitions = new HashSet<>();
-        for (ConsumerRecord<String, ChatEvent> record : records) {
-            partitions.add(record.partition());
-            assertThat(record.key()).isEqualTo(recipientPhone);
+        // collect messages for this recipient
+        List<ChatMessage> received = new ArrayList<>();
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < 10000 && received.size() < 3) {
+            ConsumerRecords<String, ChatMessage> records = testConsumer.poll(Duration.ofSeconds(1));
+            for (ConsumerRecord<String, ChatMessage> record : records) {
+                if (record.value().getRecipientPhoneNumber().equals(recipientPhone)) {
+                    received.add(record.value());
+                    assertThat(record.key()).isEqualTo(recipientPhone);
+                }
+            }
         }
-        assertThat(partitions).hasSize(1); // All in same partition
+
+        assertThat(received).hasSize(3);
+
+        // Verify order using messageIds sent
+        for (int i = 0; i < 3; i++) {
+            assertThat(received.get(i).getMessageId()).isEqualTo(messageIds.get(i));
+        }
 
         // Cleanup
         session.close();
