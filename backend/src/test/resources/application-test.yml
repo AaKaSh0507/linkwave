@@ -1,0 +1,44 @@
+spring:
+  # Use H2 in-memory database for tests
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  # JPA Configuration for H2
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  
+  # Disable Redis session for tests
+  session:
+    store-type: none
+  
+  # Kafka - use embedded for tests or mock
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+    consumer:
+      group-id: linkwave-test-group
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+    producer:
+      acks: all
+  
+  # Disable mail for tests
+  mail:
+    host: localhost
+    port: 25
+  
+  # Disable Redis auto-configuration
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+# Disable actuator endpoints for tests
+management:
+  endpoints:
+    enabled-by-default: false

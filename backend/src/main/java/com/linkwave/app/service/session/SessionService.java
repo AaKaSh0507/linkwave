@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -22,11 +23,18 @@ import java.util.Optional;
 public class SessionService {
 
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
+    
+    private static final int DEFAULT_SESSION_TIMEOUT_MINUTES = 30;
 
     private final RedisConfig redisConfig;
 
-    public SessionService(RedisConfig redisConfig) {
+    @Autowired
+    public SessionService(@Autowired(required = false) RedisConfig redisConfig) {
         this.redisConfig = redisConfig;
+    }
+    
+    private int getSessionTimeoutMinutes() {
+        return redisConfig != null ? redisConfig.getSessionTimeoutMinutes() : DEFAULT_SESSION_TIMEOUT_MINUTES;
     }
 
     /**
@@ -40,7 +48,7 @@ public class SessionService {
         HttpSession session = getCurrentSession(true);
         
         Instant now = Instant.now();
-        Instant expiresAt = now.plusSeconds(redisConfig.getSessionTimeoutMinutes() * 60L);
+        Instant expiresAt = now.plusSeconds(getSessionTimeoutMinutes() * 60L);
         
         SessionMetadata metadata = new SessionMetadata(
             session.getId(),

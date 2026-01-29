@@ -2,12 +2,15 @@ package com.linkwave.app;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
+@ActiveProfiles("test")
+@EmbeddedKafka(partitions = 1, topics = {"linkwave.chat.messages.v2"})
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5432/linkwave_test",
-    "spring.jpa.hibernate.ddl-auto=create-drop"
+    "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}"
 })
 class PlaceholderTests {
 
