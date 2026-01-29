@@ -19,10 +19,15 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final EmailConfig emailConfig;
+    
+    // Flag to skip actual email sending in dev mode (set via profile or env)
+    private final boolean devMode;
 
-    public EmailService(JavaMailSender mailSender, EmailConfig emailConfig) {
+    public EmailService(JavaMailSender mailSender, EmailConfig emailConfig,
+                        @org.springframework.beans.factory.annotation.Value("${linkwave.mail.dev-mode:true}") boolean devMode) {
         this.mailSender = mailSender;
         this.emailConfig = emailConfig;
+        this.devMode = devMode;
     }
 
     /**
@@ -33,11 +38,27 @@ public class EmailService {
      * @throws EmailDeliveryException if email sending fails
      */
     public void sendOtpEmail(String to, String otpCode) {
+        // In dev mode, just log the OTP instead of sending email
+        if (devMode) {
+            log.info("╔══════════════════════════════════════════╗");
+            log.info("║  DEV MODE - OTP CODE: {}                ║", otpCode);
+            log.info("║  For: {}                                 ", to);
+            log.info("╚══════════════════════════════════════════╝");
+            return;
+        }
+        
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(emailConfig.getFrom());
+            String fromAddress = emailConfig.getFrom();
+            if (fromAddress == null || fromAddress.isBlank()) {
+                fromAddress = "no-reply@linkwave.app";
+            }
+            
+            log.info("Attempting to send OTP email to: {} from: {}", maskEmail(to), fromAddress);
+            
+            helper.setFrom(fromAddress);
             helper.setTo(to);
             helper.setSubject("Your Linkwave OTP Code");
             helper.setText(buildOtpEmailBody(otpCode), true);
@@ -46,10 +67,11 @@ public class EmailService {
             
             log.info("OTP email sent successfully to: {}", maskEmail(to));
         } catch (MessagingException e) {
-            log.error("Failed to send OTP email to: {}", maskEmail(to));
+            log.error("Failed to send OTP email to: {} - MessagingException: {}", maskEmail(to), e.getMessage(), e);
             throw new EmailDeliveryException("Failed to send OTP email", e);
         } catch (Exception e) {
-            log.error("Unexpected error while sending OTP email to: {}", maskEmail(to));
+            log.error("Unexpected error while sending OTP email to: {} - Exception type: {} Message: {}", 
+                maskEmail(to), e.getClass().getName(), e.getMessage(), e);
             throw new EmailDeliveryException("Failed to send OTP email", e);
         }
     }

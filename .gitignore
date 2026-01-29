@@ -16,9 +16,10 @@
 # Temporary files
 tmp/
 temp/
+cookies.txt
 
-# Documentation artifacts
-*.pdf
+# Documentation artifacts (planning docs)
+/public/*.pdf
 
 # Environment variables
 .env
@@ -27,3 +28,13 @@ temp/
 
 # Docker
 docker-compose.override.yml
+
+# Node modules (redundant but explicit)
+node_modules/
+
+# Build artifacts
+build/
+.gradle/
+bin/
+.next/
+out/

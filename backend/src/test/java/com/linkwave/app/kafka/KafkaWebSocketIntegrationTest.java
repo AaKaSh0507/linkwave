@@ -58,7 +58,13 @@ import static org.mockito.Mockito.when;
 @org.springframework.test.context.TestPropertySource(properties = {
         "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
         "spring.kafka.consumer.auto-offset-reset=earliest",
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration"
+        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false"
 })
 @DirtiesContext
 class KafkaWebSocketIntegrationTest {
@@ -97,13 +103,31 @@ class KafkaWebSocketIntegrationTest {
         testConsumer.subscribe(Collections.singletonList("linkwave.chat.messages.v2"));
     }
 
+    @Autowired
+    private com.linkwave.app.repository.chat.ChatMessageRepository chatMessageRepository;
+
+    @Autowired
+    private com.linkwave.app.service.websocket.WsSessionManager sessionManager; // To verify session registration
+
     @Test
     void chatSend_authenticated_shouldPublishToKafkaAndSendAck() throws Exception {
-        // Given: Authenticated user
+        // Given: Authenticated sender AND recipient
         String senderPhone = "+14155552671";
         String recipientPhone = "+14155559999";
-        AuthenticatedUserContext userContext = new AuthenticatedUserContext(senderPhone, Instant.now());
-        when(sessionService.getAuthenticatedUser()).thenReturn(Optional.of(userContext));
+
+        AuthenticatedUserContext senderContext = new AuthenticatedUserContext(senderPhone, Instant.now());
+        AuthenticatedUserContext recipientContext = new AuthenticatedUserContext(recipientPhone, Instant.now());
+
+        // Mock session service to return appropriate user based on some context (or
+        // just force it for the test)
+        // Since we can't easily mock the session service differently for parallel
+        // connections in this integration test setup without complex mocking,
+        // we will focus on the sender flow primarily, BUT we can manually register a
+        // session for the recipient in WsSessionManager
+        // if we want to test fanout, or spy on it.
+        // For this test, let's verify DB persistence which is the critical new C4 step.
+        // We will assume the sender is authenticated for the initial connection.
+        when(sessionService.getAuthenticatedUser()).thenReturn(Optional.of(senderContext));
 
         // When: Connect and send chat.send
         StandardWebSocketClient client = new StandardWebSocketClient();
@@ -156,6 +180,15 @@ class KafkaWebSocketIntegrationTest {
             }
         }
         assertThat(found).as("Did not find message with ID %s in Kafka", messageId).isTrue();
+
+        // And: Message should be persisted in DB
+        // Wait briefly for consumer to persist
+        Thread.sleep(1000);
+        java.util.Optional<com.linkwave.app.domain.chat.ChatMessageEntity> dbMessage = chatMessageRepository
+                .findById(messageId);
+        assertThat(dbMessage).isPresent();
+        assertThat(dbMessage.get().getBody()).isEqualTo(messageBody);
+        assertThat(dbMessage.get().getSenderPhone()).isEqualTo(senderPhone);
 
         // Cleanup
         session.close();

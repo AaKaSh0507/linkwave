@@ -38,6 +38,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(messageHandler, "/ws")
                 .addInterceptors(authInterceptor)
-                .setAllowedOrigins("*"); // TODO: Configure allowed origins for production
+                .setAllowedOrigins("http://localhost:3000"); // Allow frontend origin for cookie credentials
     }
 }
