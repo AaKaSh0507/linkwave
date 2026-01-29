@@ -42,8 +42,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
-      - name: Build and test with Gradle
-        run: ./gradlew build --no-daemon
+      - name: Build with Gradle
+        run: ./gradlew build -x test --no-daemon
+      
+      - name: Run tests
+        run: ./gradlew test --no-daemon
+        env:
+          GRADLE_OPTS: "-Xmx512m"
+        continue-on-error: false
       
       - name: Upload build artifacts
         if: success()
