@@ -5,6 +5,7 @@ import com.linkwave.app.service.presence.PresenceService;
 import com.linkwave.app.service.readreceipt.ReadReceiptService;
 import com.linkwave.app.service.room.RoomMembershipService;
 import com.linkwave.app.service.typing.TypingStateManager;
+import com.linkwave.app.service.websocket.WsSessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.springframework.web.socket.WebSocketSession;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -41,6 +41,8 @@ class NativeWebSocketHandlerPresenceTest {
     private com.linkwave.app.service.chat.ChatService chatService;
 
     @Mock
+    private WsSessionManager sessionManager;
+
     private ObjectMapper objectMapper;
 
     @Mock
@@ -53,12 +55,14 @@ class NativeWebSocketHandlerPresenceTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
+        objectMapper = new ObjectMapper();
         handler = new NativeWebSocketHandler(
                 presenceService,
                 typingStateManager,
                 roomMembershipService,
                 readReceiptService,
                 chatService,
+                sessionManager,
                 objectMapper);
 
         when(session.getId()).thenReturn("test-session-id");
@@ -98,7 +102,7 @@ class NativeWebSocketHandlerPresenceTest {
         handler.afterConnectionEstablished(session);
         when(presenceService.recordHeartbeat(anyString())).thenReturn(true);
 
-        TextMessage heartbeatMsg = new TextMessage("{\"type\":\"presence.heartbeat\"}");
+        TextMessage heartbeatMsg = new TextMessage("{\"event\":\"presence.heartbeat\"}");
         handler.handleTextMessage(session, heartbeatMsg);
 
         verify(presenceService, times(1)).recordHeartbeat(TEST_PHONE);
@@ -110,7 +114,7 @@ class NativeWebSocketHandlerPresenceTest {
         handler.afterConnectionEstablished(session);
         when(presenceService.recordHeartbeat(anyString())).thenReturn(true);
 
-        TextMessage heartbeatMsg = new TextMessage("{\"type\":\"presence.heartbeat\"}");
+        TextMessage heartbeatMsg = new TextMessage("{\"event\":\"presence.heartbeat\"}");
         handler.handleTextMessage(session, heartbeatMsg);
 
         verify(session, atLeastOnce()).sendMessage(argThat(msg -> {
@@ -128,7 +132,7 @@ class NativeWebSocketHandlerPresenceTest {
         handler.afterConnectionEstablished(session);
         when(presenceService.recordHeartbeat(anyString())).thenReturn(false);
 
-        TextMessage heartbeatMsg = new TextMessage("{\"type\":\"presence.heartbeat\"}");
+        TextMessage heartbeatMsg = new TextMessage("{\"event\":\"presence.heartbeat\"}");
         handler.handleTextMessage(session, heartbeatMsg);
 
         verify(session, atLeastOnce()).sendMessage(argThat(msg -> {

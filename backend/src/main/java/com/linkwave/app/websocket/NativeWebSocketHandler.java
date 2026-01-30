@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkwave.app.domain.chat.ReadReceiptEntity;
 import com.linkwave.app.domain.chat.ReadReceiptEvent;
 import com.linkwave.app.domain.typing.TypingEvent;
+import com.linkwave.app.domain.websocket.WsMessageEnvelope;
 import com.linkwave.app.exception.NotFoundException;
 import com.linkwave.app.exception.UnauthorizedException;
 import com.linkwave.app.service.chat.ChatService;
@@ -13,6 +14,7 @@ import com.linkwave.app.service.readreceipt.ReadReceiptService;
 import com.linkwave.app.service.readreceipt.ReadReceiptService.ReadReceiptResult;
 import com.linkwave.app.service.room.RoomMembershipService;
 import com.linkwave.app.service.typing.TypingStateManager;
+import com.linkwave.app.service.websocket.WsSessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -24,9 +26,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Native WebSocket handler for real-time messaging.
@@ -65,14 +65,12 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NativeWebSocketHandler.class);
 
-    // Map of phoneNumber -> WebSocketSession for active connections
-    private final Map<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
-
     private final PresenceService presenceService;
     private final TypingStateManager typingStateManager;
     private final RoomMembershipService roomMembershipService;
     private final ReadReceiptService readReceiptService;
     private final ChatService chatService;
+    private final WsSessionManager sessionManager;
     private final ObjectMapper objectMapper;
 
     public NativeWebSocketHandler(
@@ -81,12 +79,14 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             RoomMembershipService roomMembershipService,
             ReadReceiptService readReceiptService,
             ChatService chatService,
+            WsSessionManager sessionManager,
             ObjectMapper objectMapper) {
         this.presenceService = presenceService;
         this.typingStateManager = typingStateManager;
         this.roomMembershipService = roomMembershipService;
         this.readReceiptService = readReceiptService;
         this.chatService = chatService;
+        this.sessionManager = sessionManager;
         this.objectMapper = objectMapper;
     }
 
@@ -103,7 +103,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
 
         // Store session
-        activeSessions.put(phoneNumber, session);
+        sessionManager.registerSession(phoneNumber, session);
 
         // Mark user as online (Phase D1: Presence Tracking)
         presenceService.markOnline(phoneNumber);
@@ -112,7 +112,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
                 maskPhoneNumber(phoneNumber), session.getId());
 
         // Send connection acknowledgment
-        sendMessage(session, "{\"type\":\"connection.ack\",\"status\":\"connected\"}");
+        sendMessage(session, "{\"event\":\"connection.ack\",\"status\":\"connected\"}");
     }
 
     @Override
@@ -125,15 +125,26 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         // Parse message type
         try {
             JsonNode jsonNode = objectMapper.readTree(payload);
-            String messageType = jsonNode.has("type") ? jsonNode.get("type").asText() : null;
+            String messageType = jsonNode.has("event") ? jsonNode.get("event").asText() : null;
 
             if (messageType == null) {
-                log.warn("Message from {} missing 'type' field", maskPhoneNumber(phoneNumber));
+                log.warn("Message from {} missing 'event' field", maskPhoneNumber(phoneNumber));
+                if (session.isOpen()) {
+                    session.close(CloseStatus.BAD_DATA);
+                }
                 return;
             }
 
             // Handle different message types
             switch (messageType) {
+                case "ping":
+                    handlePing(session, phoneNumber);
+                    break;
+
+                case "chat.send":
+                    handleChatSend(session, phoneNumber, jsonNode);
+                    break;
+
                 case "presence.heartbeat":
                     handlePresenceHeartbeat(session, phoneNumber);
                     break;
@@ -152,12 +163,49 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
                 default:
                     log.debug("Unhandled message type: {}", messageType);
-                    sendMessage(session, "{\"type\":\"message.ack\",\"received\":true}");
+                    sendMessage(session, "{\"event\":\"message.ack\",\"received\":true}");
                     break;
             }
 
         } catch (Exception e) {
             log.error("Failed to parse message from {}: {}", maskPhoneNumber(phoneNumber), e.getMessage());
+            if (session.isOpen()) {
+                session.close(CloseStatus.BAD_DATA);
+            }
+        }
+    }
+
+    /**
+     * Handle ping message.
+     */
+    private void handlePing(WebSocketSession session, String userId) {
+        sendMessage(session, "{\"event\":\"pong\",\"timestamp\":" + System.currentTimeMillis() + "}");
+    }
+
+    private void handleChatSend(WebSocketSession session, String userId, JsonNode jsonNode) {
+        try {
+            WsMessageEnvelope envelope = objectMapper.treeToValue(jsonNode, WsMessageEnvelope.class);
+
+            // Extract body from payload
+            String body = "";
+            if (envelope.getPayload() != null) {
+                if (envelope.getPayload().has("body")) {
+                    body = envelope.getPayload().get("body").asText();
+                } else {
+                    body = envelope.getPayload().toString();
+                }
+            }
+
+            // In Phase D, sendMessage handles validation and Kafka publishing
+            chatService.sendMessage(envelope.getTo(), userId, body);
+
+            // Send acknowledgment (chat.sent)
+            String messageId = java.util.UUID.randomUUID().toString(); // Placeholder
+            sendMessage(session,
+                    String.format("{\"event\":\"chat.sent\",\"payload\":{\"messageId\":\"%s\"}}", messageId));
+
+        } catch (Exception e) {
+            log.error("Failed to process chat.send from user {}: {}", maskPhoneNumber(userId), e.getMessage());
         }
     }
 
@@ -169,7 +217,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         boolean success = presenceService.recordHeartbeat(phoneNumber);
 
         String status = success ? "ok" : "rate_limited";
-        String response = String.format("{\"type\":\"presence.heartbeat.ack\",\"status\":\"%s\"}", status);
+        String response = String.format("{\"event\":\"presence.heartbeat.ack\",\"status\":\"%s\"}", status);
 
         sendMessage(session, response);
 
@@ -284,13 +332,16 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             List<ReadReceiptResult> results = readReceiptService.markReadUpTo(
                     roomId, messageId, userId);
 
-            // Fetch members once for batch broadcast
-            Set<String> members = roomMembershipService.getRoomMembers(roomId);
+            // Fetch members and broadcast only if there are new reads
+            boolean hasNewReads = results.stream().anyMatch(ReadReceiptResult::isNewRead);
+            if (hasNewReads) {
+                Set<String> members = roomMembershipService.getRoomMembers(roomId);
 
-            // Broadcast each new read receipt
-            for (ReadReceiptResult result : results) {
-                if (result.isNewRead()) {
-                    broadcastReadReceipt(result.getReceipt(), members);
+                // Broadcast each new read receipt
+                for (ReadReceiptResult result : results) {
+                    if (result.isNewRead()) {
+                        broadcastReadReceipt(result.getReceipt(), members);
+                    }
                 }
             }
 
@@ -346,7 +397,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         String phoneNumber = (String) session.getAttributes().get("phoneNumber");
 
         if (phoneNumber != null) {
-            activeSessions.remove(phoneNumber);
+            sessionManager.deregisterSession(session);
 
             // Mark user disconnect (Phase D1: Presence Tracking)
             // TTL will handle final offline status
@@ -394,17 +445,14 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
      * Broadcast a message to a specific user by phone number.
      */
     public void sendToUser(String phoneNumber, String message) {
-        WebSocketSession session = activeSessions.get(phoneNumber);
-        if (session != null) {
-            sendMessage(session, message);
-        }
+        sessionManager.getSession(phoneNumber).ifPresent(session -> sendMessage(session, message));
     }
 
     /**
      * Get count of active connections.
      */
     public int getActiveConnectionCount() {
-        return activeSessions.size();
+        return sessionManager.getActiveSessionCount();
     }
 
     private String maskPhoneNumber(String phoneNumber) {

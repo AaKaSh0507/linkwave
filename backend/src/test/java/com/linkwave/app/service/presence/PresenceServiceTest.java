@@ -20,11 +20,6 @@ import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@org.springframework.context.annotation.Import(com.linkwave.app.config.TestRedisConfig.class)
-@org.springframework.boot.autoconfigure.EnableAutoConfiguration(exclude = {
-        org.springframework.boot.autoconfigure.session.SessionAutoConfiguration.class,
-        org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration.class
-})
 class PresenceServiceTest {
 
     @Autowired
@@ -42,7 +37,8 @@ class PresenceServiceTest {
 
     @BeforeEach
     void setUp() {
-
+        presenceService.resetHeartbeatTime(TEST_USER_1);
+        presenceService.resetHeartbeatTime(TEST_USER_2);
         cleanupPresenceKeys();
     }
 
@@ -131,6 +127,7 @@ class PresenceServiceTest {
     void testHeartbeat_refreshesTtl() throws Exception {
 
         presenceService.markOnline(TEST_USER_1);
+        presenceService.resetHeartbeatTime(TEST_USER_1);
         String key = PRESENCE_KEY_PREFIX + TEST_USER_1;
 
         redisTemplate.expire(key, 5, TimeUnit.SECONDS);

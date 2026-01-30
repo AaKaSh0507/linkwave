@@ -16,6 +16,7 @@ spring:
   # Disable Redis session for tests
   session:
     store-type: none
+
   
   # Kafka - use embedded for tests or mock
   kafka:

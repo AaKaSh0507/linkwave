@@ -14,20 +14,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-
 @Service
 public class PresenceService {
 
     private static final Logger log = LoggerFactory.getLogger(PresenceService.class);
 
     private static final String PRESENCE_KEY_PREFIX = "linkwave:presence:";
-    private static final long PRESENCE_TTL_SECONDS = 75; 
-    private static final long HEARTBEAT_MIN_INTERVAL_MS = 20_000; 
+    private static final long PRESENCE_TTL_SECONDS = 75;
+    private static final long HEARTBEAT_MIN_INTERVAL_MS = 20_000;
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    
     private final Map<String, Long> lastHeartbeatTime = new HashMap<>();
 
     public PresenceService(RedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper) {
@@ -35,7 +33,6 @@ public class PresenceService {
         this.objectMapper = objectMapper;
     }
 
-    
     public void markOnline(String userId) {
         String key = getPresenceKey(userId);
 
@@ -44,11 +41,11 @@ public class PresenceService {
             PresenceMetadata updated;
 
             if (current == null) {
-                
+
                 updated = new PresenceMetadata(userId, Instant.now(), 1);
                 log.info("User {} came online (first connection)", maskUserId(userId));
             } else {
-                
+
                 updated = current.incrementConnections();
                 log.info("User {} added connection (count: {})",
                         maskUserId(userId), updated.getConnectionCount());
@@ -61,7 +58,6 @@ public class PresenceService {
         }
     }
 
-    
     public void markDisconnect(String userId) {
         String key = getPresenceKey(userId);
 
@@ -74,17 +70,14 @@ public class PresenceService {
             }
 
             PresenceMetadata updated = current.decrementConnections();
+            setPresenceMetadata(key, updated);
 
             if (updated.hasActiveConnections()) {
-                
-                setPresenceMetadata(key, updated);
                 log.info("User {} disconnected (remaining connections: {})",
                         maskUserId(userId), updated.getConnectionCount());
             } else {
-                
                 log.info("User {} disconnected (last connection, will expire in {}s)",
                         maskUserId(userId), PRESENCE_TTL_SECONDS);
-                
             }
 
         } catch (Exception e) {
@@ -92,9 +85,8 @@ public class PresenceService {
         }
     }
 
-    
     public boolean recordHeartbeat(String userId) {
-        
+
         Long lastHeartbeat = lastHeartbeatTime.get(userId);
         long now = System.currentTimeMillis();
 
@@ -115,7 +107,6 @@ public class PresenceService {
                 return true;
             }
 
-            
             PresenceMetadata updated = current.updateLastSeen();
             setPresenceMetadata(key, updated);
 
@@ -131,20 +122,17 @@ public class PresenceService {
         }
     }
 
-    
     public boolean isUserOnline(String userId) {
         String key = getPresenceKey(userId);
         Boolean exists = redisTemplate.hasKey(key);
         return Boolean.TRUE.equals(exists);
     }
 
-    
     public Instant getLastSeen(String userId) {
         PresenceMetadata metadata = getPresenceMetadata(userId);
         return metadata != null ? metadata.getLastSeen() : null;
     }
 
-    
     public Map<String, Boolean> getUsersPresence(List<String> userIds) {
         Map<String, Boolean> presenceMap = new HashMap<>();
 
@@ -155,7 +143,6 @@ public class PresenceService {
         return presenceMap;
     }
 
-    
     public PresenceMetadata getPresenceMetadata(String userId) {
         String key = getPresenceKey(userId);
         String json = redisTemplate.opsForValue().get(key);
@@ -173,7 +160,6 @@ public class PresenceService {
         }
     }
 
-    
     private void setPresenceMetadata(String key, PresenceMetadata metadata) {
         try {
             String json = objectMapper.writeValueAsString(metadata);
@@ -184,12 +170,10 @@ public class PresenceService {
         }
     }
 
-    
     private String getPresenceKey(String userId) {
         return PRESENCE_KEY_PREFIX + userId;
     }
 
-    
     private String maskUserId(String userId) {
         if (userId == null || userId.length() < 7) {
             return "***";
@@ -197,7 +181,13 @@ public class PresenceService {
         return userId.substring(0, 4) + "***" + userId.substring(userId.length() - 2);
     }
 
-    
+    /**
+     * Resets the heartbeat time for a user. Used for testing.
+     */
+    public void resetHeartbeatTime(String userId) {
+        lastHeartbeatTime.remove(userId);
+    }
+
     public long getPresenceTtlSeconds() {
         return PRESENCE_TTL_SECONDS;
     }

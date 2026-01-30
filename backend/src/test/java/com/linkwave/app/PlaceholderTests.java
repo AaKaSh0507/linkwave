@@ -8,7 +8,7 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@EmbeddedKafka(partitions = 1, topics = {"linkwave.chat.messages.v2"})
+@EmbeddedKafka(partitions = 1, topics = {"chat.messages"})
 @TestPropertySource(properties = {
     "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}"
 })

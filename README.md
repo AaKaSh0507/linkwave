@@ -1,97 +1,97 @@
 # Linkwave
 
-Real-time chat application with session-based authentication and WebSocket messaging.
+Real-time chat application with session-based authentication, WebSocket messaging, and Kafka-backed persistence. Designed for scale and robustness.
 
-## Tech Stack
+## 🚀 Tech Stack
 
-**Backend:** Java 21, Spring Boot, Spring Security, Spring Data JPA, STOMP, Kafka  
-**Frontend:** Next.js App Router, React, TypeScript, Tailwind CSS  
-**Database:** PostgreSQL, Redis  
-**Infrastructure:** Docker, Kubernetes
+- **Backend:** Java 21, Spring Boot 3, Spring Security, Spring Data JPA
+- **Messaging:** STOMP over WebSocket, Apache Kafka
+- **Frontend:** Next.js 15 (App Router), React, TypeScript, Tailwind CSS
+- **Storage:** PostgreSQL 17, Redis
+- **Infra:** Docker, Kubernetes (k3s)
 
-## Quick Start
+---
+
+## 🛠️ Quick Start
+
+The project uses a `Makefile` to simplify development workflows.
 
 ```bash
-# Install dependencies
+# 1. Install all dependencies (Frontend + Backend)
 make install
 
-# Start all services (Docker + Backend + Frontend)
+# 2. Start all services in the background (Docker + Backend + Frontend)
 make run
+
+# 3. Access the application
+# URL: http://localhost:3000
 ```
 
-Access the app at `http://localhost:3000`
+### Useful Commands
+- `make stop` - Stop backend/frontend processes
+- `make stop-all` - Stop everything including Docker containers
+- `make dev` - Start only Docker services (PostgreSQL, Redis, Kafka, MailHog)
+- `make status` - Check status of all services
+- `make logs` - Follow all logs
 
-**Other useful commands:**
+---
+
+## 🏗️ Architecture & Core Features
+
+### Real-time Messaging
+Linkwave uses **STOMP over WebSocket** for real-time communication, with a native WebSocket fallback at `/ws` for raw JSON messaging.
+
+1. **Client Persistence:** Messages sent via `/app/chat.send` are validated and published to Kafka.
+2. **Kafka Backbone:** The `chat.messages` topic handles decoupling of message ingestion and persistence.
+3. **Database:** Messages are persisted in PostgreSQL for full history retrieval.
+4. **Broadcast:** Consumers broadcast messages back to room subscribers via `/topic/room.{roomId}`.
+
+### Advanced Features
+
+#### 🔹 Typing Indicators
+Ephemeral, in-memory system for real-time feedback.
+- **Auto-timeout:** indicators clear after 5 seconds of inactivity.
+- **Rate Limiting:** 2-second cooldown between typing events to prevent spam.
+- **Isolation:** Strictly scoped to participants within a specific room.
+
+#### 🔹 Read Receipts
+Persistent tracking of message read status for 1-1 and group chats.
+- **Idempotency:** Guaranteed at both application and database levels.
+- **Batch Processing:** Supports marking up to 50 messages as read in a single operation.
+- **Group Support:** Tracks multiple readers per message with "Seen by..." granularity.
+
+---
+
+## 📡 API & WebSocket Reference
+
+### Authentication
+- `POST /api/v1/auth/request-otp` - Request OTP via email.
+- `POST /api/v1/auth/verify-otp` - Verify OTP and establish session.
+- `POST /api/v1/auth/logout` - Invalidate session.
+
+### Chat & Rooms
+- `GET /api/v1/chat/rooms` - List user's active rooms.
+- `POST /api/v1/chat/rooms/direct` - Start/Retrieve 1-1 chat.
+- `POST /api/v1/chat/rooms/group` - Create group chat.
+- `GET /api/v1/chat/rooms/{id}/messages` - Fetch message history.
+
+### WebSocket Endpoints
+- `STOMP: /ws/chat` - Primary messaging endpoint.
+- `Native: /ws` - JSON-based fallback messaging.
+
+---
+
+## 🧪 Development
+
+### Running Tests
 ```bash
-make stop          # Stop backend/frontend
-make stop-all      # Stop everything including Docker
-make dev           # Start Docker only (run backend/frontend in separate terminals)
-make backend-fg    # Run backend in foreground
-make frontend-fg   # Run frontend in foreground
-make help          # See all available commands
+make test  # Runs backend JUnit tests
 ```
 
-## Features
-
-- **Authentication:** OTP-based login via email
-- **Real-time Chat:** STOMP over WebSocket with Kafka message queue
-- **Room-based Messaging:** Direct (1-1) and group chats
-- **Session Management:** Redis-backed HTTP sessions
-- **Message Persistence:** PostgreSQL with full history
-
-## API Endpoints
-
-**Auth:**
-- `POST /api/v1/auth/request-otp` - Request OTP
-- `POST /api/v1/auth/verify-otp` - Verify OTP and create session
-- `POST /api/v1/auth/logout` - Logout
-
-**Chat:**
-- `GET /api/v1/chat/rooms` - List user's rooms
-- `POST /api/v1/chat/rooms/direct` - Create direct chat
-- `POST /api/v1/chat/rooms/group` - Create group chat
-- `GET /api/v1/chat/rooms/{id}/messages` - Get room messages
-- `WebSocket /ws/chat` - STOMP messaging endpoint
-
-## Development
-
-**Run tests:**
+### Database Access
 ```bash
-make test
+make db-shell  # Direct access to PostgreSQL via psql
 ```
 
-**Database access:**
-```bash
-make db-shell
-```
-
-**View logs:**
-```bash
-make logs
-```
-
-**Check service status:**
-```bash
-make status
-```
-
-## Architecture
-
-```
-Browser → Next.js → Spring Boot → Kafka → PostgreSQL
-          ↓                       ↓
-       WebSocket              Redis (sessions)
-```
-
-**Message Flow:**
-1. Client sends message via STOMP (`/app/chat.send`)
-2. Backend validates and publishes to Kafka topic `chat.messages`
-3. Consumer persists to PostgreSQL
-4. Consumer broadcasts to room subscribers (`/topic/room.{roomId}`)
-5. All room members receive message in real-time
-
-## Deployment
-
-Kubernetes manifests in `k8s/` directory. Uses k3s + Traefik + cert-manager.
-
-**Requirements:** 2 CPU, 4GB RAM, 40GB disk
+### Infrastructure
+Kubernetes manifests are located in `k8s/`. The project is designed to run on `k3s` with `Traefik` as the Ingress controller.

@@ -41,9 +41,10 @@ spring:
     store-type: redis
     timeout: ${SESSION_TIMEOUT:30m}
     redis:
+      repository-type: indexed
       namespace: ${SESSION_NAMESPACE:linkwave:session:}
       flush-mode: on_save
-      cleanup-cron: "0 * * * * *"
+
   
   # Kafka Configuration
   kafka:

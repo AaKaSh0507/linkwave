@@ -19,7 +19,7 @@ temp/
 cookies.txt
 
 # Documentation artifacts (planning docs)
-/public/*.pdf
+/Documentation/*.pdf
 
 # Environment variables
 .env

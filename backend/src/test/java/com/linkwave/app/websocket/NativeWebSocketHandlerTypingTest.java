@@ -1,11 +1,11 @@
 package com.linkwave.app.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.linkwave.app.domain.typing.TypingEvent;
 import com.linkwave.app.service.presence.PresenceService;
 import com.linkwave.app.service.readreceipt.ReadReceiptService;
 import com.linkwave.app.service.room.RoomMembershipService;
 import com.linkwave.app.service.typing.TypingStateManager;
+import com.linkwave.app.service.websocket.WsSessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +42,9 @@ class NativeWebSocketHandlerTypingTest {
     @Mock
     private com.linkwave.app.service.chat.ChatService chatService;
 
+    @Mock
+    private WsSessionManager sessionManager;
+
     private ObjectMapper objectMapper; // Real ObjectMapper for JSON parsing
 
     @Mock
@@ -64,6 +67,7 @@ class NativeWebSocketHandlerTypingTest {
                 roomMembershipService,
                 readReceiptService,
                 chatService,
+                sessionManager,
                 objectMapper);
 
         when(session.getId()).thenReturn(SESSION_ID);
@@ -87,7 +91,7 @@ class NativeWebSocketHandlerTypingTest {
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -99,7 +103,7 @@ class NativeWebSocketHandlerTypingTest {
 
         when(roomMembershipService.isUserInRoom(TEST_PHONE, TEST_ROOM)).thenReturn(false);
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -112,7 +116,7 @@ class NativeWebSocketHandlerTypingTest {
         when(roomMembershipService.isUserInRoom(TEST_PHONE, TEST_ROOM)).thenReturn(true);
         when(typingStateManager.markTypingStart(TEST_ROOM, TEST_PHONE, SESSION_ID)).thenReturn(false);
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -125,7 +129,7 @@ class NativeWebSocketHandlerTypingTest {
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.stop\",\"roomId\":\"" + TEST_ROOM + "\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.stop\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -149,7 +153,7 @@ class NativeWebSocketHandlerTypingTest {
     @Test
     void testTypingStart_missingRoomId_ignored() throws Exception {
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.start\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.start\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -159,7 +163,7 @@ class NativeWebSocketHandlerTypingTest {
     @Test
     void testTypingStop_missingRoomId_ignored() throws Exception {
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.stop\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.stop\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
@@ -174,7 +178,7 @@ class NativeWebSocketHandlerTypingTest {
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
 
-        TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
+        TextMessage message = new TextMessage("{\"event\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
         handler.handleTextMessage(session, message);
 
