@@ -40,15 +40,16 @@ public class UserController {
      */
     @GetMapping("/me")
     public ResponseEntity<UserProfilePayload> getCurrentUser() {
-        // Check if Spring Security authentication is present (for tests with @WithMockUser)
+        // Check if Spring Security authentication is present (for tests with
+        // @WithMockUser)
         Authentication springAuth = SecurityContextHolder.getContext().getAuthentication();
-        if (springAuth != null && springAuth.isAuthenticated() && 
-            !"anonymousUser".equals(springAuth.getPrincipal())) {
-            
+        if (springAuth != null && springAuth.isAuthenticated() &&
+                !"anonymousUser".equals(springAuth.getPrincipal())) {
+
             // Try to get from session first
             AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
-                .orElse(null);
-            
+                    .orElse(null);
+
             if (userContext == null) {
                 log.warn("Unauthorized access attempt to /me endpoint");
                 return ResponseEntity.status(401).build();
@@ -58,14 +59,38 @@ public class UserController {
             String authenticatedAt = ISO_FORMATTER.format(userContext.getAuthenticatedAt());
 
             UserProfilePayload profile = new UserProfilePayload(maskedPhone, authenticatedAt);
-            
+
             log.info("User profile accessed: {}", maskedPhone);
-            
+
             return ResponseEntity.ok(profile);
         }
-        
+
         // No authentication
         log.warn("Unauthorized access attempt to /me endpoint");
         return ResponseEntity.status(401).build();
+    }
+
+    /**
+     * Get user's contacts.
+     * Returns empty list for now - will be populated from chat rooms in the future.
+     * 
+     * @return empty list of contacts
+     */
+    @GetMapping("/contacts")
+    public ResponseEntity<java.util.List<Object>> getContacts() {
+        // Verify authentication
+        AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
+                .orElse(null);
+
+        if (userContext == null) {
+            log.warn("Unauthorized access attempt to /contacts endpoint");
+            return ResponseEntity.status(401).build();
+        }
+
+        log.info("Contacts accessed by: {}", userContext.getMaskedPhoneNumber());
+
+        // Return empty list for now
+        // TODO: Populate from chat rooms or user relationships
+        return ResponseEntity.ok(java.util.Collections.emptyList());
     }
 }

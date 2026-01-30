@@ -86,12 +86,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // Public health check
                 .requestMatchers("/actuator/health").permitAll()
-                // WebSocket endpoint - authentication handled by WsAuthenticationInterceptor
+                // WebSocket endpoint - authentication handled by StompSessionAuthInterceptor
                 .requestMatchers("/ws/**").permitAll()
                 // Protected user endpoints - require authenticated session
                 .requestMatchers("/api/v1/user/**").authenticated()
-                // Future protected chat endpoints
-                // .requestMatchers("/api/v1/chat/**").authenticated()
+                // Protected chat endpoints - require authenticated session
+                .requestMatchers("/api/v1/chat/**").authenticated()
                 // All other requests require authentication
                 .anyRequest().authenticated()
             );

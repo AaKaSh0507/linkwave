@@ -5,6 +5,9 @@ import type {
   OtpRequest,
   OtpVerify,
   User,
+  ChatRoom,
+  ChatMessage,
+  RoomMember,
 } from "./types";
 
 // API base URL - connect to backend
@@ -110,7 +113,7 @@ export const authApi = {
 // Contacts API - returns empty array if backend endpoint not available
 export const contactsApi = {
   getContacts: async (): Promise<ApiResponse<Contact[]>> => {
-    const result = await fetchApi<Contact[]>("/contacts");
+    const result = await fetchApi<Contact[]>("/user/contacts");
     // Return empty array if endpoint doesn't exist yet
     if (!result.success && result.error?.includes("404")) {
       return { success: true, data: [] };
@@ -142,4 +145,42 @@ export const messagesApi = {
       method: "POST",
       body: JSON.stringify({ messageIds }),
     }, true),
+};
+
+// Phase D: Chat Rooms API
+export const chatApi = {
+  // Get all rooms the user is a member of
+  getRooms: async (): Promise<ApiResponse<ChatRoom[]>> => {
+    return fetchApi<ChatRoom[]>("/chat/rooms");
+  },
+
+  // Create a direct (1-1) chat room
+  createDirectRoom: async (otherUserPhone: string): Promise<ApiResponse<ChatRoom>> => {
+    return fetchApi<ChatRoom>("/chat/rooms/direct", {
+      method: "POST",
+      body: JSON.stringify({ otherUserPhone }),
+    }, true);
+  },
+
+  // Create a group chat room
+  createGroupRoom: async (name: string, members: string[]): Promise<ApiResponse<ChatRoom>> => {
+    return fetchApi<ChatRoom>("/chat/rooms/group", {
+      method: "POST",
+      body: JSON.stringify({ name, members }),
+    }, true);
+  },
+
+  // Get messages in a room
+  getRoomMessages: async (
+    roomId: string,
+    page: number = 0,
+    size: number = 50
+  ): Promise<ApiResponse<{ messages: ChatMessage[]; total: number; totalPages: number; currentPage: number }>> => {
+    return fetchApi(`/chat/rooms/${roomId}/messages?page=${page}&size=${size}`);
+  },
+
+  // Get members of a room
+  getRoomMembers: async (roomId: string): Promise<ApiResponse<RoomMember[]>> => {
+    return fetchApi<RoomMember[]>(`/chat/rooms/${roomId}/members`);
+  },
 };

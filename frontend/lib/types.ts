@@ -6,7 +6,33 @@ export interface User {
   createdAt: string;
 }
 
-// Message types
+// Phase D: Room-based messaging types
+export interface ChatRoom {
+  id: string;
+  type: "DIRECT" | "GROUP";
+  name?: string;
+  createdAt: number;
+  lastMessage?: ChatMessage;
+  unreadCount?: number;
+}
+
+export interface ChatMessage {
+  messageId: string;
+  roomId: string;
+  senderPhoneNumber: string;
+  body: string;
+  sentAt: number;
+  deliveredAt?: number;
+  readAt?: number;
+  ttlDays?: number;
+}
+
+export interface RoomMember {
+  phoneNumber: string;
+  joinedAt: number;
+}
+
+// Legacy Message type (Phase C - can be deprecated)
 export interface Message {
   id: string;
   senderId: string;

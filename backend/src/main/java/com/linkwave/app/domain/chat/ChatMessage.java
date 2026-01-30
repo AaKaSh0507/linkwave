@@ -9,11 +9,12 @@ import java.util.UUID;
  * Canonical ChatMessage schema for Linkwave.
  * Shared across WebSocket, Kafka, and Database.
  * 
- * Phase C3: Schema Definition
+ * Phase D: Room-based messaging
  * 
  * Invariants:
  * - messageId is immutable and server-generated
- * - sender != recipient
+ * - roomId must exist
+ * - sender must be a member of the room
  * - body not empty
  * - sentAt <= deliveredAt <= readAt
  */
@@ -22,11 +23,11 @@ public class ChatMessage implements Serializable {
     @JsonProperty("messageId")
     private String messageId;
 
+    @JsonProperty("roomId")
+    private String roomId;
+
     @JsonProperty("senderPhoneNumber")
     private String senderPhoneNumber;
-
-    @JsonProperty("recipientPhoneNumber")
-    private String recipientPhoneNumber;
 
     @JsonProperty("body")
     private String body;
@@ -46,11 +47,11 @@ public class ChatMessage implements Serializable {
     public ChatMessage() {
     }
 
-    public ChatMessage(String messageId, String senderPhoneNumber, String recipientPhoneNumber,
+    public ChatMessage(String messageId, String roomId, String senderPhoneNumber,
             String body, long sentAt, Integer ttlDays) {
         this.messageId = messageId;
+        this.roomId = roomId;
         this.senderPhoneNumber = senderPhoneNumber;
-        this.recipientPhoneNumber = recipientPhoneNumber;
         this.body = body;
         this.sentAt = sentAt;
         this.ttlDays = ttlDays;
@@ -59,11 +60,11 @@ public class ChatMessage implements Serializable {
     /**
      * Create a new ChatMessage with generated ID and timestamp.
      */
-    public static ChatMessage create(String senderPhoneNumber, String recipientPhoneNumber, String body) {
+    public static ChatMessage create(String roomId, String senderPhoneNumber, String body) {
         return new ChatMessage(
                 UUID.randomUUID().toString(),
+                roomId,
                 senderPhoneNumber,
-                recipientPhoneNumber,
                 body,
                 System.currentTimeMillis(),
                 7 // Default retention 7 days
@@ -88,12 +89,12 @@ public class ChatMessage implements Serializable {
         this.senderPhoneNumber = senderPhoneNumber;
     }
 
-    public String getRecipientPhoneNumber() {
-        return recipientPhoneNumber;
+    public String getRoomId() {
+        return roomId;
     }
 
-    public void setRecipientPhoneNumber(String recipientPhoneNumber) {
-        this.recipientPhoneNumber = recipientPhoneNumber;
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 
     public String getBody() {
@@ -144,11 +145,6 @@ public class ChatMessage implements Serializable {
         return maskPhoneNumber(senderPhoneNumber);
     }
 
-    @JsonIgnore
-    public String getMaskedRecipient() {
-        return maskPhoneNumber(recipientPhoneNumber);
-    }
-
     private static String maskPhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.length() < 7) {
             return "***";
@@ -160,8 +156,8 @@ public class ChatMessage implements Serializable {
     public String toString() {
         return "ChatMessage{" +
                 "messageId='" + messageId + '\'' +
+                ", roomId='" + roomId + '\'' +
                 ", sender='" + getMaskedSender() + '\'' +
-                ", recipient='" + getMaskedRecipient() + '\'' +
                 ", bodyLength=" + (body != null ? body.length() : 0) +
                 ", sentAt=" + sentAt +
                 '}';

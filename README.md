@@ -1,90 +1,97 @@
 # Linkwave
 
-Modern realtime chat application with session-based authentication.
-
-## Status
-
-**Implemented:**
-- Session-based authentication with Redis
-- OTP verification via email
-- CSRF protection
-- Vue 3 frontend with protected routes
-
-**Not Yet Implemented:**
-- Real-time messaging (WebSocket)
-- User persistence
-- Contact management
-- Message history
+Real-time chat application with session-based authentication and WebSocket messaging.
 
 ## Tech Stack
 
-**Backend:** Java 21, Spring Boot 3.4.1, Spring Security, Redis, PostgreSQL, Gradle  
-**Frontend:** Vue 3.5, Vuetify 3.7, Pinia 2.2, Vite 5.4, Axios  
-**Infrastructure:** Docker, Kafka, Mailhog
+**Backend:** Java 21, Spring Boot, Spring Security, Spring Data JPA, STOMP, Kafka  
+**Frontend:** Next.js App Router, React, TypeScript, Tailwind CSS  
+**Database:** PostgreSQL, Redis  
+**Infrastructure:** Docker, Kubernetes
 
 ## Quick Start
 
-### 1. Start Infrastructure
-
 ```bash
-docker compose up -d
+# Install dependencies
+make install
+
+# Start all services (Docker + Backend + Frontend)
+make run
 ```
 
-### 2. Start Backend
+Access the app at `http://localhost:3000`
 
+**Other useful commands:**
 ```bash
-cd backend
-./gradlew build
-./gradlew bootRun
+make stop          # Stop backend/frontend
+make stop-all      # Stop everything including Docker
+make dev           # Start Docker only (run backend/frontend in separate terminals)
+make backend-fg    # Run backend in foreground
+make frontend-fg   # Run frontend in foreground
+make help          # See all available commands
 ```
 
-Backend: http://localhost:8080
+## Features
 
-### 3. Start Frontend
+- **Authentication:** OTP-based login via email
+- **Real-time Chat:** STOMP over WebSocket with Kafka message queue
+- **Room-based Messaging:** Direct (1-1) and group chats
+- **Session Management:** Redis-backed HTTP sessions
+- **Message Persistence:** PostgreSQL with full history
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## API Endpoints
 
-Frontend: http://localhost:5173
+**Auth:**
+- `POST /api/v1/auth/request-otp` - Request OTP
+- `POST /api/v1/auth/verify-otp` - Verify OTP and create session
+- `POST /api/v1/auth/logout` - Logout
 
-### 4. Test OTP Flow
-
-1. Open http://localhost:5173
-2. Enter phone (+1234567890) and email
-3. Check OTP in Mailhog: http://localhost:8025
-4. Enter OTP to login
-5. Session persists across refresh
-
-## Configuration
-
-**Backend:** `backend/src/main/resources/application.yml`  
-Environment variables: DATABASE_URL, REDIS_HOST, MAIL_HOST, etc.
-
-**Frontend:** Create `frontend/.env.local`:
-```env
-VITE_API_BASE_URL=http://localhost:8080
-```
-
-**Infrastructure:** Root `.env` file (see `.env.example` for reference)
+**Chat:**
+- `GET /api/v1/chat/rooms` - List user's rooms
+- `POST /api/v1/chat/rooms/direct` - Create direct chat
+- `POST /api/v1/chat/rooms/group` - Create group chat
+- `GET /api/v1/chat/rooms/{id}/messages` - Get room messages
+- `WebSocket /ws/chat` - STOMP messaging endpoint
 
 ## Development
 
+**Run tests:**
 ```bash
-# Backend tests
-cd backend && ./gradlew test
-
-# Frontend build
-cd frontend && npm run build
+make test
 ```
+
+**Database access:**
+```bash
+make db-shell
+```
+
+**View logs:**
+```bash
+make logs
+```
+
+**Check service status:**
+```bash
+make status
+```
+
+## Architecture
+
+```
+Browser → Next.js → Spring Boot → Kafka → PostgreSQL
+          ↓                       ↓
+       WebSocket              Redis (sessions)
+```
+
+**Message Flow:**
+1. Client sends message via STOMP (`/app/chat.send`)
+2. Backend validates and publishes to Kafka topic `chat.messages`
+3. Consumer persists to PostgreSQL
+4. Consumer broadcasts to room subscribers (`/topic/room.{roomId}`)
+5. All room members receive message in real-time
 
 ## Deployment
 
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) and [CLUSTER_SETUP.md](CLUSTER_SETUP.md) for container and Kubernetes deployment.
+Kubernetes manifests in `k8s/` directory. Uses k3s + Traefik + cert-manager.
 
-## License
-
-Proprietary
-
+**Requirements:** 2 CPU, 4GB RAM, 40GB disk

@@ -6,25 +6,26 @@ import java.time.Instant;
 /**
  * JPA Entity for persisting chat messages.
  * 
- * Phase C4: Database Persistence
- * This entity mirrors the ChatMessage domain model.
+ * Phase D: Room-based messaging
+ * Messages belong to rooms and are sent by members.
  */
 @Entity
 @Table(name = "chat_messages", indexes = {
-        @Index(name = "idx_chat_sender_recipient_sent_at", columnList = "sender_phone, recipient_phone, sent_at"),
-        @Index(name = "idx_chat_recipient_sent_at", columnList = "recipient_phone, sent_at")
+        @Index(name = "idx_chat_message_room_sent_at", columnList = "room_id, sent_at"),
+        @Index(name = "idx_chat_message_sender", columnList = "sender_phone")
 })
 public class ChatMessageEntity {
 
     @Id
-    @Column(name = "id")
+    @Column(name = "id", length = 36)
     private String id; // UUID string
 
-    @Column(name = "sender_phone", nullable = false)
-    private String senderPhone;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", nullable = false)
+    private ChatRoomEntity room;
 
-    @Column(name = "recipient_phone", nullable = false)
-    private String recipientPhone;
+    @Column(name = "sender_phone", nullable = false, length = 20)
+    private String senderPhone;
 
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")
     private String body;
@@ -60,12 +61,12 @@ public class ChatMessageEntity {
         this.senderPhone = senderPhone;
     }
 
-    public String getRecipientPhone() {
-        return recipientPhone;
+    public ChatRoomEntity getRoom() {
+        return room;
     }
 
-    public void setRecipientPhone(String recipientPhone) {
-        this.recipientPhone = recipientPhone;
+    public void setRoom(ChatRoomEntity room) {
+        this.room = room;
     }
 
     public String getBody() {

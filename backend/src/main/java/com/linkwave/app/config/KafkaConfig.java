@@ -23,14 +23,14 @@ import java.util.Map;
 /**
  * Kafka configuration for chat event messaging.
  * 
- * Phase C2: Direct Kafka integration
- * - Producer: Publishes ChatEvent to linkwave.chat.events
- * - Consumer: Receives ChatEvent for future delivery pipeline (C4)
- * - Partition strategy: By recipient phone number for ordering
+ * Phase D: Room-based messaging with Kafka
+ * - Producer: Publishes ChatMessage to chat.messages
+ * - Consumer: Receives ChatMessage for persistence and delivery
+ * - Partition strategy: By roomId for message ordering within rooms
  * - Replication factor: 1 (local learning environment)
  * 
  * Topics:
- * - linkwave.chat.events: Main chat event stream
+ * - chat.messages: Main chat message stream
  */
 @Configuration
 @EnableKafka
@@ -107,14 +107,14 @@ public class KafkaConfig {
     }
 
     /**
-     * Create the chat events topic.
-     * Partitions: 1 (ordering per recipient, no concurrency needed yet)
+     * Create the chat messages topic.
+     * Partitions: 3 (allows room-based parallelism)
      * Replication: 1 (local dev)
      */
     @Bean
-    public NewTopic chatEventsTopic() {
-        return TopicBuilder.name("linkwave.chat.messages.v2")
-                .partitions(1)
+    public NewTopic chatMessagesTopic() {
+        return TopicBuilder.name("chat.messages")
+                .partitions(3)
                 .replicas(1)
                 .build();
     }
