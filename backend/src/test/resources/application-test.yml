@@ -32,9 +32,12 @@ spring:
     host: localhost
     port: 25
   
-  # Disable Redis auto-configuration
+  # Redis configuration for tests (use real Redis instance)
   data:
     redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:linkwave_redis_pass}
       repositories:
         enabled: false
 
