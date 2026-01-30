@@ -284,10 +284,13 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             List<ReadReceiptResult> results = readReceiptService.markReadUpTo(
                     roomId, messageId, userId);
 
+            // Fetch members once for batch broadcast
+            Set<String> members = roomMembershipService.getRoomMembers(roomId);
+
             // Broadcast each new read receipt
             for (ReadReceiptResult result : results) {
                 if (result.isNewRead()) {
-                    broadcastReadReceipt(result.getReceipt());
+                    broadcastReadReceipt(result.getReceipt(), members);
                 }
             }
 
@@ -308,9 +311,8 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
      * Broadcast read receipt to all room members except the reader.
      * Phase D3: Read Receipts
      */
-    private void broadcastReadReceipt(ReadReceiptEntity receipt) {
+    private void broadcastReadReceipt(ReadReceiptEntity receipt, Set<String> members) {
         try {
-            Set<String> members = roomMembershipService.getRoomMembers(receipt.getRoomId());
             if (members.isEmpty()) {
                 return;
             }

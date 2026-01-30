@@ -47,14 +47,12 @@ class ReadReceiptServiceTest {
 
     @Test
     void markMessageRead_whenNewRead_shouldPersistAndReturnTrue() {
-        
+
         when(repository.existsByMessageIdAndReaderPhoneNumber(MESSAGE_ID, READER_PHONE)).thenReturn(false);
         when(roomMembershipService.isUserInRoom(READER_PHONE, ROOM_ID)).thenReturn(true);
 
-        
         ReadReceiptResult result = service.markMessageRead(MESSAGE_ID, ROOM_ID, READER_PHONE);
 
-        
         assertThat(result.isNewRead()).isTrue();
         assertThat(result.getReceipt()).isNotNull();
         assertThat(result.getReceipt().getMessageId()).isEqualTo(MESSAGE_ID);
@@ -64,30 +62,27 @@ class ReadReceiptServiceTest {
 
     @Test
     void markMessageRead_whenAlreadyRead_shouldReturnFalse() {
-        
+
         when(repository.existsByMessageIdAndReaderPhoneNumber(MESSAGE_ID, READER_PHONE)).thenReturn(true);
 
-        
         ReadReceiptResult result = service.markMessageRead(MESSAGE_ID, ROOM_ID, READER_PHONE);
 
-        
         assertThat(result.isNewRead()).isFalse();
         verify(repository, never()).save(any());
     }
 
     @Test
     void markMessageRead_whenUserNotInRoom_shouldThrowException() {
-        
+
         when(repository.existsByMessageIdAndReaderPhoneNumber(MESSAGE_ID, READER_PHONE)).thenReturn(false);
         when(roomMembershipService.isUserInRoom(READER_PHONE, ROOM_ID)).thenReturn(false);
 
-        
         assertThrows(UnauthorizedException.class, () -> service.markMessageRead(MESSAGE_ID, ROOM_ID, READER_PHONE));
     }
 
     @Test
     void markReadUpTo_shouldMarkAllUnreadMessages() {
-        
+
         String targetMsgId = "msg-target";
         Instant targetTime = Instant.now();
 
@@ -95,25 +90,24 @@ class ReadReceiptServiceTest {
         targetMsg.setId(targetMsgId);
         targetMsg.setSentAt(targetTime);
 
+        // Mock room relationship
+        com.linkwave.app.domain.chat.ChatRoomEntity room = new com.linkwave.app.domain.chat.ChatRoomEntity();
+        room.setId(ROOM_ID);
+        targetMsg.setRoom(room);
+
         when(messageRepository.findById(targetMsgId)).thenReturn(Optional.of(targetMsg));
 
-        
-        
         when(repository.findMaxReadMessageTimestamp(ROOM_ID, READER_PHONE)).thenReturn(null);
 
-        
         List<String> unreadIds = Arrays.asList("msg-1", "msg-2", targetMsgId);
-        when(repository.findUnreadMessageIdsUpTo(ROOM_ID, READER_PHONE, targetTime))
+        when(repository.findUnreadMessageIdsUpTo(ROOM_ID, READER_PHONE, targetTime, null))
                 .thenReturn(unreadIds);
 
-        when(repository.existsByMessageIdAndReaderPhoneNumber(any(), any())).thenReturn(false);
         when(roomMembershipService.isUserInRoom(READER_PHONE, ROOM_ID)).thenReturn(true);
 
-        
         List<ReadReceiptResult> results = service.markReadUpTo(ROOM_ID, targetMsgId, READER_PHONE);
 
-        
         assertThat(results).hasSize(3);
-        verify(repository, times(3)).save(any(ReadReceiptEntity.class));
+        verify(repository).saveAll(anyList());
     }
 }
