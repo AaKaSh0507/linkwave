@@ -1,74 +1,56 @@
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
-import type { Message } from "@/lib/types";
-import { formatTime } from "@/lib/date-utils";
-import { Check, CheckCheck, Clock } from "lucide-react";
+import { format } from 'date-fns'
+import type { Message, User } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 interface MessageBubbleProps {
-  message: Message;
-  isSent: boolean;
-  showTimestamp?: boolean;
+  message: Message
+  sender: User
+  isOwn: boolean
+  showTimestamp?: boolean
 }
 
-export function MessageBubble({ message, isSent, showTimestamp = true }: MessageBubbleProps) {
-  const timestamp = new Date(message.timestamp);
-
-  const getStatusIcon = () => {
-    switch (message.status) {
-      case "sending":
-        return <Clock className="w-3 h-3 text-primary-foreground/60" />;
-      case "sent":
-        return <Check className="w-3 h-3 text-primary-foreground/60" />;
-      case "delivered":
-        return <CheckCheck className="w-3 h-3 text-primary-foreground/60" />;
-      case "read":
-        return <CheckCheck className="w-3 h-3 text-primary-foreground" />;
-      default:
-        return message.readAt ? (
-          <CheckCheck className="w-3 h-3 text-primary-foreground" />
-        ) : (
-          <Check className="w-3 h-3 text-primary-foreground/60" />
-        );
-    }
-  };
-
+export function MessageBubble({
+  message,
+  sender,
+  isOwn,
+  showTimestamp = true,
+}: MessageBubbleProps) {
   return (
-    <div
-      className={cn(
-        "flex",
-        isSent ? "justify-end" : "justify-start"
-      )}
-    >
+    <div className={cn('flex gap-3 mb-3', isOwn && 'flex-row-reverse')}>
+      {/* Avatar */}
       <div
         className={cn(
-          "max-w-[75%] md:max-w-[65%] rounded-2xl px-4 py-2",
-          isSent
-            ? "bg-message-sent text-primary-foreground rounded-br-md"
-            : "bg-message-received text-foreground rounded-bl-md"
+          'w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center text-xs font-semibold text-white',
+          isOwn ? 'from-primary to-accent' : 'from-secondary to-primary/60'
         )}
       >
-        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{message.body}</p>
-        
+        {sender.displayName ? sender.displayName.charAt(0).toUpperCase() : '?'}
+      </div>
+
+      {/* Message Content */}
+      <div className={cn('flex flex-col', isOwn && 'items-end')}>
+        <div
+          className={cn(
+            'px-4 py-2.5 rounded-2xl max-w-xs break-words',
+            isOwn
+              ? 'bg-primary text-primary-foreground rounded-br-none'
+              : 'bg-secondary text-foreground rounded-bl-none'
+          )}
+        >
+          <p className="text-sm leading-relaxed">{message.content}</p>
+        </div>
+
+        {/* Timestamp and Read Status */}
         {showTimestamp && (
-          <div className={cn(
-            "flex items-center gap-1 mt-1",
-            isSent ? "justify-end" : "justify-start"
-          )}>
-            <span className={cn(
-              "text-xs",
-              isSent ? "text-primary-foreground/70" : "text-muted-foreground"
-            )}>
-              {formatTime(timestamp)}
-            </span>
-            {isSent && (
-              <span className="flex-shrink-0">
-                {getStatusIcon()}
-              </span>
-            )}
+          <div className={cn('flex items-center gap-1 mt-1 text-xs text-muted-foreground', isOwn && 'flex-row-reverse gap-1')}>
+            <span>{format(new Date(message.timestamp), 'HH:mm')}</span>
+            {isOwn && message.isRead && <span>✓✓</span>}
+            {isOwn && !message.isRead && <span>✓</span>}
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

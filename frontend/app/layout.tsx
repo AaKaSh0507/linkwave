@@ -1,27 +1,16 @@
 import React from "react"
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { ThemeProvider } from 'next-themes'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthProvider } from '@/lib/auth-context'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1f' },
-  ],
-}
-
 export const metadata: Metadata = {
-  title: 'Chat - Real-time Messaging',
-  description: 'A modern real-time chat application with OTP authentication, presence indicators, and message history',
+  title: 'Messenger - Real-time Chat',
+  description: 'A modern real-time messaging application',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -48,16 +37,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={`font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <AuthProvider>
           {children}
-        </ThemeProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

@@ -1,143 +1,117 @@
-"use client";
+'use client'
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Send, Smile } from "lucide-react";
+import React from "react"
+
+import { useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
+import { config } from '@/lib/config'
 
 interface MessageInputProps {
-  onSend: (message: string) => void;
-  onTypingStart: () => void;
-  onTypingStop: () => void;
-  disabled?: boolean;
-  placeholder?: string;
+  onSend: (message: string) => void
+  onTyping?: (isTyping: boolean) => void
+  isLoading?: boolean
+  disabled?: boolean
 }
 
 export function MessageInput({
   onSend,
-  onTypingStart,
-  onTypingStop,
+  onTyping,
+  isLoading,
   disabled,
-  placeholder = "Type a message...",
 }: MessageInputProps) {
-  const [message, setMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [message, setMessage] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      const newHeight = Math.min(textarea.scrollHeight, 150);
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, [message]);
-
-  // Handle typing indicator
-  useEffect(() => {
-    if (message.length > 0 && !isTyping) {
-      setIsTyping(true);
-      onTypingStart();
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    
+    // Enforce max message length
+    if (value.length <= config.messages.maxLength) {
+      setMessage(value)
     }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+    // Handle typing indicator
+    if (!isTyping) {
+      setIsTyping(true)
+      onTyping?.(true)
     }
 
+    // Debounce typing indicator off
+    clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => {
-      if (isTyping) {
-        setIsTyping(false);
-        onTypingStop();
+      setIsTyping(false)
+      onTyping?.(false)
+    }, 1000)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (message.trim() && !isLoading && !disabled) {
+      onSend(message.trim())
+      setMessage('')
+      setIsTyping(false)
+      onTyping?.(false)
+
+      // Focus back on textarea
+      if (textareaRef.current) {
+        textareaRef.current.focus()
       }
-    }, 2000);
-
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [message, isTyping, onTypingStart, onTypingStop]);
-
-  // Stop typing when component unmounts
-  useEffect(() => {
-    return () => {
-      if (isTyping) {
-        onTypingStop();
-      }
-    };
-  }, [isTyping, onTypingStop]);
-
-  const handleSend = () => {
-    const trimmedMessage = message.trim();
-    if (!trimmedMessage || disabled) return;
-
-    onSend(trimmedMessage);
-    setMessage("");
-    setIsTyping(false);
-    onTypingStop();
-
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
     }
-  };
+  }
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e as any)
     }
-  };
+  }
+
+  const charCount = message.length
+  const isNearLimit = charCount > config.messages.maxLength * 0.9
 
   return (
-    <div className="border-t border-border bg-background p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={disabled}
-              rows={1}
-              className={cn(
-                "w-full resize-none rounded-2xl border border-input bg-background px-4 py-3 pr-12",
-                "text-sm placeholder:text-muted-foreground",
-                "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                "max-h-[150px] overflow-y-auto"
-              )}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 bottom-1 h-8 w-8 text-muted-foreground hover:text-foreground"
-            >
-              <Smile className="h-5 w-5" />
-              <span className="sr-only">Add emoji</span>
-            </Button>
-          </div>
-
-          <Button
-            onClick={handleSend}
-            disabled={disabled || !message.trim()}
-            size="icon"
-            className="h-11 w-11 rounded-full flex-shrink-0"
+    <form onSubmit={handleSubmit} className="border-t border-border bg-card p-4">
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+            disabled={isLoading || disabled}
+            className={cn(
+              'resize-none border-2 rounded-xl min-h-12 max-h-24',
+              'text-sm placeholder:text-muted-foreground',
+              isNearLimit
+                ? 'border-destructive focus:border-destructive'
+                : 'border-primary/20 focus:border-primary'
+            )}
+            rows={1}
+          />
+          <div
+            className={cn(
+              'text-xs mt-1 text-right transition-colors',
+              isNearLimit ? 'text-destructive font-semibold' : 'text-muted-foreground'
+            )}
           >
-            <Send className="h-5 w-5" />
-            <span className="sr-only">Send message</span>
-          </Button>
+            {charCount} / {config.messages.maxLength}
+          </div>
         </div>
 
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line
-        </p>
+        <Button
+          type="submit"
+          disabled={!message.trim() || isLoading || disabled}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 h-auto min-h-12 rounded-xl self-end"
+        >
+          {isLoading ? 'Sending...' : 'Send'}
+        </Button>
       </div>
-    </div>
-  );
+    </form>
+  )
 }

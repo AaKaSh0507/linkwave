@@ -1,150 +1,68 @@
 export interface User {
-  id: string;
-  phoneNumber: string;
-  displayName?: string;
-  avatarUrl?: string;
-  createdAt: string;
+  id: string
+  phoneNumber: string
+  displayName?: string
+  profilePicture?: string
+  status: 'online' | 'offline'
+  lastSeen?: Date
 }
 
-// Phase D: Room-based messaging types
-export interface ChatRoom {
-  id: string;
-  type: "DIRECT" | "GROUP";
-  name?: string;
-  createdAt: number;
-  lastMessage?: ChatMessage;
-  unreadCount?: number;
-}
-
-export interface ChatMessage {
-  messageId: string;
-  roomId: string;
-  senderPhoneNumber: string;
-  body: string;
-  sentAt: number;
-  deliveredAt?: number;
-  readAt?: number;
-  ttlDays?: number;
-}
-
-export interface RoomMember {
-  phoneNumber: string;
-  joinedAt: number;
-}
-
-// Legacy Message type (Phase C - can be deprecated)
 export interface Message {
-  id: string;
-  senderId: string;
-  recipientId: string;
-  body: string;
-  timestamp: string;
-  readAt?: string | null;
-  status?: "sending" | "sent" | "delivered" | "read";
+  id: string
+  conversationId: string
+  senderId: string
+  content: string
+  timestamp: Date
+  isRead: boolean
+  readAt?: Date
 }
 
-// Contact with presence
-export interface Contact extends User {
-  lastMessage?: Message;
-  unreadCount: number;
-  presence: "online" | "offline";
-  lastSeen?: string;
+export interface Conversation {
+  id: string
+  participantIds: string[]
+  lastMessage?: Message
+  lastMessageTime?: Date
+  unreadCount: number
 }
 
-// Session
-export interface Session {
-  token: string;
-  userId: string;
-  expiry: string;
+export interface OTPResponse {
+  success: boolean
+  message: string
+  otpId?: string
 }
 
-// Auth state
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  isLoading: boolean;
+export interface VerifyOTPRequest {
+  otpId: string
+  otp: string
 }
 
-// OTP request - requires phone number AND email (backend requirement)
-export interface OtpRequest {
-  phoneNumber: string;
-  email: string;
+export interface AuthResponse {
+  token: string
+  user: {
+    id: string
+    phoneNumber: string
+    displayName?: string
+  }
 }
 
-// OTP verify
-export interface OtpVerify {
-  phoneNumber: string;
-  otp: string;
+export interface ConversationMessage extends Message {
+  sender: User
 }
 
-// WebSocket events
-export type WebSocketEventType =
-  | "chat.send"
-  | "chat.receive"
-  | "presence.update"
-  | "typing.start"
-  | "typing.stop"
-  | "read.update"
-  | "connected"
-  | "disconnected";
-
-export interface ChatSendEvent {
-  type: "chat.send";
-  to: string;
-  body: string;
+export interface TypingIndicator {
+  conversationId: string
+  userId: string
+  isTyping: boolean
 }
 
-export interface ChatReceiveEvent {
-  type: "chat.receive";
-  from: string;
-  body: string;
-  messageId: string;
-  timestamp: string;
+export interface PresenceUpdate {
+  userId: string
+  status: 'online' | 'offline'
+  lastSeen: Date
 }
 
-export interface PresenceUpdateEvent {
-  type: "presence.update";
-  userId: string;
-  status: "online" | "offline";
-  lastSeen?: string;
-}
-
-export interface TypingStartEvent {
-  type: "typing.start";
-  from: string;
-}
-
-export interface TypingStopEvent {
-  type: "typing.stop";
-  from: string;
-}
-
-export interface ReadUpdateEvent {
-  type: "read.update";
-  messageIds: string[];
-  readBy: string;
-}
-
-export type WebSocketEvent =
-  | ChatSendEvent
-  | ChatReceiveEvent
-  | PresenceUpdateEvent
-  | TypingStartEvent
-  | TypingStopEvent
-  | ReadUpdateEvent;
-
-// Chat state
-export interface ChatState {
-  contacts: Contact[];
-  selectedContact: Contact | null;
-  messages: Record<string, Message[]>; // keyed by recipientId
-  typingUsers: Set<string>;
-  connectionStatus: "connecting" | "connected" | "disconnected" | "reconnecting";
-}
-
-// API response types
-export interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  success: boolean;
+export interface ReadReceipt {
+  messageId: string
+  userId: string
+  readAt: Date
 }
