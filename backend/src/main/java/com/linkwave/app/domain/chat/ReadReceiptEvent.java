@@ -1,9 +1,22 @@
 package com.linkwave.app.domain.chat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ReadReceiptEvent {
+
+    @JsonProperty("type")
+    private String type = "read.receipt";
+
+    @JsonProperty("roomId")
     private String roomId;
+
+    @JsonProperty("messageId")
     private String messageId;
+
+    @JsonProperty("readerId")
     private String readerId;
+
+    @JsonProperty("timestamp")
     private long timestamp;
 
     public ReadReceiptEvent() {
@@ -14,6 +27,14 @@ public class ReadReceiptEvent {
         this.messageId = messageId;
         this.readerId = readerId;
         this.timestamp = timestamp;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public String getRoomId() {

@@ -42,8 +42,7 @@ class NativeWebSocketHandlerTypingTest {
     @Mock
     private com.linkwave.app.service.chat.ChatService chatService;
 
-    @Mock
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper; // Real ObjectMapper for JSON parsing
 
     @Mock
     private WebSocketSession session;
@@ -58,6 +57,7 @@ class NativeWebSocketHandlerTypingTest {
     @BeforeEach
     void setUp() throws Exception {
         mocks = MockitoAnnotations.openMocks(this);
+        objectMapper = new ObjectMapper(); // Use real ObjectMapper
         handler = new NativeWebSocketHandler(
                 presenceService,
                 typingStateManager,
@@ -86,8 +86,6 @@ class NativeWebSocketHandlerTypingTest {
         when(typingStateManager.markTypingStart(TEST_ROOM, TEST_PHONE, SESSION_ID)).thenReturn(true);
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
-        when(objectMapper.writeValueAsString(any(TypingEvent.class)))
-                .thenReturn("{\"type\":\"typing.event\",\"action\":\"start\"}");
 
         TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
@@ -126,8 +124,6 @@ class NativeWebSocketHandlerTypingTest {
 
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
-        when(objectMapper.writeValueAsString(any(TypingEvent.class)))
-                .thenReturn("{\"type\":\"typing.event\",\"action\":\"stop\"}");
 
         TextMessage message = new TextMessage("{\"type\":\"typing.stop\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
@@ -143,8 +139,6 @@ class NativeWebSocketHandlerTypingTest {
                 .thenReturn(List.of(TEST_ROOM));
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
-        when(objectMapper.writeValueAsString(any(TypingEvent.class)))
-                .thenReturn("{\"type\":\"typing.event\",\"action\":\"stop\"}");
 
         handler.afterConnectionEstablished(session);
         handler.afterConnectionClosed(session, CloseStatus.NORMAL);
@@ -179,8 +173,6 @@ class NativeWebSocketHandlerTypingTest {
         when(typingStateManager.markTypingStart(TEST_ROOM, TEST_PHONE, SESSION_ID)).thenReturn(true);
         when(roomMembershipService.getRoomMembers(TEST_ROOM))
                 .thenReturn(Set.of(TEST_PHONE, TEST_PHONE_2));
-        when(objectMapper.writeValueAsString(any(TypingEvent.class)))
-                .thenReturn("{\"type\":\"typing.event\",\"action\":\"start\"}");
 
         TextMessage message = new TextMessage("{\"type\":\"typing.start\",\"roomId\":\"" + TEST_ROOM + "\"}");
         handler.afterConnectionEstablished(session);
