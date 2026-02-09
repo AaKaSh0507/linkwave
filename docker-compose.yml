@@ -1,130 +1,212 @@
+# =============================================================================
+# LinkWave - Development Docker Compose
+# All services for local development
+# =============================================================================
+
 services:
-  # PostgreSQL Database - Primary data store for REST resources
-  postgres-db:
-    image: postgres:17.2-alpine
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
     container_name: linkwave-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-linkwave}
+      POSTGRES_USER: ${POSTGRES_USER:-linkwave}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkwave_dev}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - linkwave-net
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/db/init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-linkwave} -d ${POSTGRES_DB:-linkwave}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - linkwave-network
     restart: unless-stopped
 
-  # Redis Cache - Session storage and presence tracking
-  redis-cache:
-    image: redis:7.4.2-alpine
+  # ---------------------------------------------------------------------------
+  # Redis Cache
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
     container_name: linkwave-redis
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-linkwave_dev}
     ports:
-      - "${REDIS_PORT}:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redis-data:/data
-    networks:
-      - linkwave-net
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-linkwave_dev}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
+    networks:
+      - linkwave-network
     restart: unless-stopped
 
-  # Zookeeper - Kafka coordination service
-  kafka-zookeeper:
-    image: confluentinc/cp-zookeeper:7.8.0
+  # ---------------------------------------------------------------------------
+  # Zookeeper (Kafka Dependency)
+  # ---------------------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: linkwave-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_SYNC_LIMIT: 2
-    ports:
-      - "2181:2181"
     volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-logs:/var/lib/zookeeper/log
-    networks:
-      - linkwave-net
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - linkwave-network
     restart: unless-stopped
 
-  # Kafka Broker - Event streaming for chat messages
-  kafka-broker:
-    image: confluentinc/cp-kafka:7.8.0
+  # ---------------------------------------------------------------------------
+  # Kafka Message Broker
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
     container_name: linkwave-kafka
     depends_on:
-      kafka-zookeeper:
+      zookeeper:
         condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     ports:
       - "29092:29092"
-      - "9092:9092"
     volumes:
-      - kafka-data:/var/lib/kafka/data
-    networks:
-      - linkwave-net
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 30s
+    networks:
+      - linkwave-network
     restart: unless-stopped
 
-  # Mailhog - SMTP mock server for email testing
-  smtp-mailhog:
+  # ---------------------------------------------------------------------------
+  # MailHog (Email Testing)
+  # ---------------------------------------------------------------------------
+  mailhog:
     image: mailhog/mailhog:v1.0.1
     container_name: linkwave-mailhog
     ports:
-      - "${MAILHOG_SMTP_PORT}:1025"  # SMTP server
-      - "${MAILHOG_UI_PORT}:8025"    # Web UI
-    networks:
-      - linkwave-net
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
+    networks:
+      - linkwave-network
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Spring Boot API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: ../docker/api/Dockerfile
+    container_name: linkwave-api
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-linkwave}
+      DATABASE_USERNAME: ${POSTGRES_USER:-linkwave}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-linkwave_dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-linkwave_dev}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_TLS_ENABLED: "false"
+      SERVER_PORT: 8080
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - linkwave-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Next.js Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_WS_URL: ws://localhost:8080/ws
+    container_name: linkwave-frontend
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080/ws
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - linkwave-network
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
-  linkwave-net:
-    name: linkwave-network
+  linkwave-network:
     driver: bridge
 
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
-  postgres-data:
-    name: linkwave-postgres-data
-  redis-data:
-    name: linkwave-redis-data
-  zookeeper-data:
-    name: linkwave-zookeeper-data
-  zookeeper-logs:
-    name: linkwave-zookeeper-logs
-  kafka-data:
-    name: linkwave-kafka-data
+  postgres_data:
+  redis_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:

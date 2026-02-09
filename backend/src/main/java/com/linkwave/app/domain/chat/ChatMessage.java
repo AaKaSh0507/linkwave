@@ -5,19 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.util.UUID;
 
-/**
- * Canonical ChatMessage schema for Linkwave.
- * Shared across WebSocket, Kafka, and Database.
- * 
- * Phase D: Room-based messaging
- * 
- * Invariants:
- * - messageId is immutable and server-generated
- * - roomId must exist
- * - sender must be a member of the room
- * - body not empty
- * - sentAt <= deliveredAt <= readAt
- */
 public class ChatMessage implements Serializable {
 
     @JsonProperty("messageId")
@@ -57,9 +44,6 @@ public class ChatMessage implements Serializable {
         this.ttlDays = ttlDays;
     }
 
-    /**
-     * Create a new ChatMessage with generated ID and timestamp.
-     */
     public static ChatMessage create(String roomId, String senderPhoneNumber, String body) {
         return new ChatMessage(
                 UUID.randomUUID().toString(),
@@ -67,11 +51,9 @@ public class ChatMessage implements Serializable {
                 senderPhoneNumber,
                 body,
                 System.currentTimeMillis(),
-                7 // Default retention 7 days
+                7
         );
     }
-
-    // Getters and Setters
 
     public String getMessageId() {
         return messageId;
@@ -137,9 +119,6 @@ public class ChatMessage implements Serializable {
         this.ttlDays = ttlDays;
     }
 
-    /**
-     * Helpers for logging
-     */
     @JsonIgnore
     public String getMaskedSender() {
         return maskPhoneNumber(senderPhoneNumber);

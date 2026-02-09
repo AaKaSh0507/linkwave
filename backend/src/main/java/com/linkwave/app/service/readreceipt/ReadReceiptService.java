@@ -92,12 +92,10 @@ public class ReadReceiptService {
         ChatMessageEntity targetMsg = messageRepository.findById(messageId)
                 .orElseThrow(() -> new NotFoundException("Message not found"));
 
-        // CRITICAL: Validate that the message belongs to the specified room
         if (!targetMsg.getRoom().getId().equals(roomId)) {
             throw new UnauthorizedException("Message does not belong to specified room");
         }
 
-        // Validate room membership once for the batch
         if (!roomMembershipService.isUserInRoom(readerPhoneNumber, roomId)) {
             throw new UnauthorizedException("Not a room member");
         }
@@ -105,15 +103,10 @@ public class ReadReceiptService {
         Instant targetTimestamp = targetMsg.getSentAt();
         Instant maxReadTimestamp = repository.findMaxReadMessageTimestamp(roomId, readerPhoneNumber);
 
-        // Strict ordering: If trying to read something older than what was already
-        // read, ignore it.
-        // This prevents "filling in gaps" from the past.
         if (maxReadTimestamp != null && !targetTimestamp.isAfter(maxReadTimestamp)) {
             return new ArrayList<>();
         }
 
-        // Find unread messages up to targetTimestamp, BUT STRICTLY AFTER
-        // maxReadTimestamp
         List<String> unreadMessageIds = repository.findUnreadMessageIdsUpTo(
                 roomId, readerPhoneNumber, targetTimestamp, maxReadTimestamp);
 
@@ -123,11 +116,6 @@ public class ReadReceiptService {
 
         int MAX_BATCH_SIZE = 50;
         if (unreadMessageIds.size() > MAX_BATCH_SIZE) {
-            // If we have more than batch size, we should probably read up to the batch
-            // limit
-            // But for now, just processing the first 50 found (which are ordered by time
-            // ASC)
-            // is safe. The user will need to send another read receipt for the rest.
             unreadMessageIds = unreadMessageIds.subList(0, MAX_BATCH_SIZE);
         }
 

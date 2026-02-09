@@ -18,11 +18,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Security configuration for the application.
- * Enables session-based authentication with Redis storage.
- * Protects user endpoints with authentication requirement.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -35,91 +30,59 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Configure CSRF token repository to use cookies
         CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         tokenRepository.setCookieName("XSRF-TOKEN");
         tokenRepository.setHeaderName("X-XSRF-TOKEN");
-        
-        // Use default CSRF token request handler
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        
+
         http
-            // Enable CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
-            // Add custom session authentication filter
-            .addFilterBefore(new SessionAuthenticationFilter(sessionService), 
-                           UsernamePasswordAuthenticationFilter.class)
-            
-            // CSRF Configuration
-            .csrf(csrf -> csrf
-                // Use cookie-based CSRF tokens (accessible to JavaScript for SPAs)
-                .csrfTokenRepository(tokenRepository)
-                .csrfTokenRequestHandler(requestHandler)
-                // Exempt OTP endpoints - these are email-based, no browser form submission
-                .ignoringRequestMatchers("/api/v1/auth/request-otp", "/api/v1/auth/verify-otp")
-                // All other POST/PUT/DELETE require CSRF token (including logout)
-            )
-            
-            // Session Management Configuration
-            .sessionManagement(session -> session
-                // Enable session creation (not stateless)
-                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                // Maximum one session per user
-                .maximumSessions(1)
-                .maxSessionsPreventsLogin(false)
-            )
-            
-            // Exception Handling Configuration
-            .exceptionHandling(exception -> exception
-                // Return 401 for unauthenticated requests (no redirect)
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(401);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Unauthorized - Authentication required\"}");
-                })
-            )
-            
-            // Authorization Rules
-            .authorizeHttpRequests(auth -> auth
-                // Public authentication endpoints
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                // Public health check
-                .requestMatchers("/actuator/health").permitAll()
-                // WebSocket endpoint - authentication handled by StompSessionAuthInterceptor
-                .requestMatchers("/ws/**").permitAll()
-                // Protected user endpoints - require authenticated session
-                .requestMatchers("/api/v1/user/**").authenticated()
-                // Protected chat endpoints - require authenticated session
-                .requestMatchers("/api/v1/chat/**").authenticated()
-                // All other requests require authentication
-                .anyRequest().authenticated()
-            );
-        
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .addFilterBefore(new SessionAuthenticationFilter(sessionService),
+                        UsernamePasswordAuthenticationFilter.class)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(tokenRepository)
+                        .csrfTokenRequestHandler(requestHandler)
+                        .ignoringRequestMatchers("/api/v1/auth/request-otp", "/api/v1/auth/verify-otp")
+                )
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false))
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized - Authentication required\"}");
+                        }))
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/docs", "/docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/v1/user/**").authenticated()
+                        .requestMatchers("/api/v1/chat/**").authenticated()
+                        .anyRequest().authenticated());
+
         return http.build();
     }
 
-    /**
-     * CORS configuration for frontend access.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Next.js dev server
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true); // Allow cookies/session
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
-    /**
-     * Bean for session lifecycle event publishing.
-     * Required for proper session management.
-     */
     @Bean
     public HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();

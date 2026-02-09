@@ -13,71 +13,48 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Map;
 
-/**
- * WebSocket handshake interceptor for session-based authentication.
- * 
- * Validates that the user has an authenticated HTTP session before
- * allowing WebSocket upgrade. If not authenticated, rejects the
- * connection with 1008 (policy violation).
- * 
- * Security:
- * - WebSocket upgrade inherits session cookie from HTTP
- * - CSRF not required for WebSocket (connection-based protocol)
- * - Phone number is stored in WebSocket session attributes for use in handler
- */
 @Component
 public class WsAuthenticationInterceptor implements HandshakeInterceptor {
-    
+
     private static final Logger log = LoggerFactory.getLogger(WsAuthenticationInterceptor.class);
-    
+
     private final SessionService sessionService;
-    
+
     public WsAuthenticationInterceptor(SessionService sessionService) {
         this.sessionService = sessionService;
     }
-    
-    /**
-     * Before handshake: Check if user is authenticated.
-     * Reject connection if not authenticated.
-     */
+
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request, 
-                                  ServerHttpResponse response, 
-                                  WebSocketHandler wsHandler, 
+    public boolean beforeHandshake(ServerHttpRequest request,
+                                  ServerHttpResponse response,
+                                  WebSocketHandler wsHandler,
                                   Map<String, Object> attributes) throws Exception {
-        
-        // Get authenticated user from session
+
         var authenticatedUser = sessionService.getAuthenticatedUser();
-        
+
         if (authenticatedUser.isEmpty()) {
-            log.warn("WebSocket handshake rejected: Not authenticated (remote: {})", 
+            log.warn("WebSocket handshake rejected: Not authenticated (remote: {})",
                      request.getRemoteAddress());
             response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
-            return false; // Reject handshake
+            return false;
         }
-        
+
         AuthenticatedUserContext userContext = authenticatedUser.get();
         String phoneNumber = userContext.getPhoneNumber();
-        
-        // Store phone number in WebSocket session attributes for handler access
         attributes.put("phoneNumber", phoneNumber);
         attributes.put("authenticatedAt", userContext.getAuthenticatedAt());
-        
-        log.info("WebSocket handshake accepted for user: {} (remote: {})", 
+
+        log.info("WebSocket handshake accepted for user: {} (remote: {})",
                  userContext.getMaskedPhoneNumber(), request.getRemoteAddress());
-        
-        return true; // Allow handshake
+
+        return true;
     }
-    
-    /**
-     * After handshake: Connection established.
-     */
+
     @Override
-    public void afterHandshake(ServerHttpRequest request, 
-                              ServerHttpResponse response, 
-                              WebSocketHandler wsHandler, 
+    public void afterHandshake(ServerHttpRequest request,
+                              ServerHttpResponse response,
+                              WebSocketHandler wsHandler,
                               Exception exception) {
-        // No action needed after handshake
         if (exception != null) {
             log.error("WebSocket handshake error: {}", exception.getMessage());
         }

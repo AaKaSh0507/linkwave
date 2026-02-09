@@ -1,0 +1,96 @@
+title = "Gitleaks Configuration"
+
+# Gitleaks rules configuration
+# https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use default rules
+useDefault = true
+
+[allowlist]
+description = "LinkWave allowlist"
+
+# Regex patterns for paths to ignore
+paths = [
+  '''\.secrets\.baseline$''',
+  '''package-lock\.json$''',
+  '''pnpm-lock\.yaml$''',
+  '''yarn\.lock$''',
+  '''\.env\.example$''',
+  '''\.env\.template$''',
+  '''\.env\.sample$''',
+  '''node_modules/''',
+  '''\.git/''',
+  '''\.next/''',
+  '''build/''',
+  '''dist/''',
+  '''target/''',
+  '''bin/''',
+  '''\.gradle/''',
+]
+
+# Regex patterns for commits to ignore
+commits = []
+
+# Regex patterns for specific strings to ignore
+regexes = [
+  # Example/placeholder passwords
+  '''password\s*[:=]\s*['"](changeme|password|secret|test|example|placeholder)['"i]''',
+  # Localhost URLs
+  '''(localhost|127\.0\.0\.1|0\.0\.0\.0)''',
+  # Example API keys
+  '''(your[_-]?api[_-]?key|example[_-]?key|test[_-]?key|placeholder)''',
+]
+
+# Specific stopwords to ignore
+stopwords = [
+  "changeme",
+  "password",
+  "secret",
+  "example",
+  "placeholder",
+  "test",
+  "dummy",
+  "fake",
+  "mock",
+]
+
+[[rules]]
+id = "linkwave-jwt-secret"
+description = "LinkWave JWT Secret"
+regex = '''linkwave[._-]?jwt[._-]?secret\s*[:=]\s*['"]([^'"]+)['"]'''
+keywords = ["linkwave", "jwt", "secret"]
+
+[[rules]]
+id = "linkwave-api-key"
+description = "LinkWave API Key"
+regex = '''linkwave[._-]?api[._-]?key\s*[:=]\s*['"]([^'"]+)['"]'''
+keywords = ["linkwave", "api", "key"]
+
+[[rules]]
+id = "spring-datasource-password"
+description = "Spring Datasource Password"
+regex = '''spring\.datasource\.password\s*[:=]\s*['"]?([^'"}\s]+)['"]?'''
+keywords = ["spring", "datasource", "password"]
+[rules.allowlist]
+regexes = [
+  '''changeme''',
+  '''password''',
+  '''\$\{.*\}''', # Environment variable placeholders
+]
+
+[[rules]]
+id = "redis-password"
+description = "Redis Password"
+regex = '''redis[._-]?password\s*[:=]\s*['"]?([^'"}\s]+)['"]?'''
+keywords = ["redis", "password"]
+[rules.allowlist]
+regexes = ['''changeme''', '''password''', '''\$\{.*\}''']
+
+[[rules]]
+id = "database-url-with-password"
+description = "Database URL with embedded password"
+regex = '''(postgres|mysql|mongodb|redis)://[^:]+:([^@]+)@'''
+keywords = ["postgres", "mysql", "mongodb", "redis"]
+[rules.allowlist]
+regexes = ['''changeme''', '''password''']

@@ -1,0 +1,13 @@
+# Markdownlint ignore file
+
+# Ignore node_modules
+node_modules/
+
+# Ignore build output
+.next/
+build/
+dist/
+target/
+
+# Ignore generated files
+CHANGELOG.md

@@ -1,0 +1,92 @@
+# syntax=docker/dockerfile:1.4
+
+# =============================================================================
+# LINKWAVE API - Production Dockerfile
+# Spring Boot 3.x with Java 21 - Multi-stage build with security hardening
+# =============================================================================
+
+ARG JAVA_VERSION=21
+
+# -----------------------------------------------------------------------------
+# Stage 1: Build
+# -----------------------------------------------------------------------------
+FROM eclipse-temurin:${JAVA_VERSION}-jdk-alpine AS builder
+
+WORKDIR /app
+
+# Install required build tools
+RUN apk add --no-cache bash
+
+# Copy Gradle wrapper and build files first (layer caching)
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+COPY gradle.properties .
+
+# Make gradlew executable
+RUN chmod +x gradlew
+
+# Download dependencies (cached layer)
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew dependencies --no-daemon
+
+# Copy source code
+COPY src src
+
+# Build the application with layered JAR
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew build -x test --no-daemon && \
+    java -Djarmode=layertools -jar build/libs/*.jar extract --destination build/extracted
+
+# -----------------------------------------------------------------------------
+# Stage 2: Production Runtime (minimal image)
+# -----------------------------------------------------------------------------
+FROM eclipse-temurin:${JAVA_VERSION}-jre-alpine AS production
+
+LABEL maintainer="LinkWave Team" \
+    version="1.0" \
+    description="LinkWave API Server"
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S linkwave && \
+    adduser -u 1001 -S linkwave -G linkwave && \
+    mkdir -p /app/logs && \
+    chown -R linkwave:linkwave /app
+
+WORKDIR /app
+
+# Install minimal runtime dependencies and remove cache
+RUN apk add --no-cache curl tzdata && \
+    rm -rf /var/cache/apk/*
+
+# Set timezone
+ENV TZ=UTC
+
+# Copy layered application (optimizes Docker layer caching)
+COPY --from=builder --chown=linkwave:linkwave /app/build/extracted/dependencies/ ./
+COPY --from=builder --chown=linkwave:linkwave /app/build/extracted/spring-boot-loader/ ./
+COPY --from=builder --chown=linkwave:linkwave /app/build/extracted/snapshot-dependencies/ ./
+COPY --from=builder --chown=linkwave:linkwave /app/build/extracted/application/ ./
+
+# Switch to non-root user
+USER linkwave
+
+# Production JVM tuning for containers
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+    -XX:MaxRAMPercentage=75.0 \
+    -XX:+UseG1GC \
+    -XX:+UseStringDeduplication \
+    -XX:+HeapDumpOnOutOfMemoryError \
+    -XX:HeapDumpPath=/app/logs/heapdump.hprof \
+    -Djava.security.egd=file:/dev/./urandom \
+    -Dspring.profiles.active=prod"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -sf http://localhost:8080/actuator/health || exit 1
+
+EXPOSE 8080
+
+# Use exec form for proper signal handling (SIGTERM for graceful shutdown)
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]

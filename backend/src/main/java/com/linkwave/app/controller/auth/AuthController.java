@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * REST controller for authentication operations.
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 @Validated
@@ -35,12 +32,6 @@ public class AuthController {
         this.sessionService = sessionService;
     }
 
-    /**
-     * Request OTP generation for a phone number and send via email.
-     * 
-     * @param payload the request payload containing phone number and email
-     * @return success response without OTP value
-     */
     @PostMapping("/request-otp")
     public ResponseEntity<Map<String, String>> requestOtp(
             @Valid @RequestBody OtpRequestPayload payload) {
@@ -52,22 +43,12 @@ public class AuthController {
         ));
     }
 
-    /**
-     * Verify OTP and authenticate session.
-     * 
-     * @param payload the request payload containing phone number and OTP
-     * @return verification response with authentication status
-     */
     @PostMapping("/verify-otp")
     public ResponseEntity<VerificationResponsePayload> verifyOtp(
             @Valid @RequestBody VerificationRequestPayload payload) {
         
-        // Verify OTP
         otpService.verifyOtp(payload.getPhoneNumber(), payload.getOtp());
-        
-        // Authenticate session
         AuthenticatedUserContext userContext = sessionService.authenticateSession(payload.getPhoneNumber());
-        
         log.info("User authenticated: {}", userContext.getMaskedPhoneNumber());
         
         return ResponseEntity.ok(
@@ -75,13 +56,6 @@ public class AuthController {
         );
     }
 
-    /**
-     * Get CSRF token for authenticated requests.
-     * Token is automatically set in XSRF-TOKEN cookie by Spring Security.
-     * 
-     * @param token the CSRF token (injected by Spring)
-     * @return CSRF token value
-     */
     @GetMapping("/csrf")
     public ResponseEntity<Map<String, String>> getCsrfToken(
             org.springframework.security.web.csrf.CsrfToken token) {
@@ -97,11 +71,6 @@ public class AuthController {
         ));
     }
 
-    /**
-     * Logout endpoint - invalidates current session.
-     * 
-     * @return success response
-     */
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         sessionService.invalidateSession();
@@ -111,9 +80,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
-    /**
-     * Exception handler for throttle violations.
-     */
     @ExceptionHandler(OtpService.OtpThrottleException.class)
     public ResponseEntity<Map<String, String>> handleThrottleException(
             OtpService.OtpThrottleException ex) {
@@ -122,9 +88,6 @@ public class AuthController {
             .body(Map.of("error", ex.getMessage()));
     }
 
-    /**
-     * Exception handler for email delivery failures.
-     */
     @ExceptionHandler(EmailService.EmailDeliveryException.class)
     public ResponseEntity<Map<String, String>> handleEmailDeliveryException(
             EmailService.EmailDeliveryException ex) {
@@ -135,9 +98,6 @@ public class AuthController {
             .body(Map.of("error", "Failed to send OTP. Please try again later."));
     }
 
-    /**
-     * Exception handler for OTP verification failures.
-     */
     @ExceptionHandler(OtpService.OtpVerificationException.class)
     public ResponseEntity<Map<String, String>> handleVerificationException(
             OtpService.OtpVerificationException ex) {

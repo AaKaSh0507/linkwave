@@ -12,10 +12,6 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
-/**
- * Configuration for Spring Session with Redis backend.
- * Enables HTTP session storage in Redis with configurable timeout.
- */
 @Configuration
 @EnableRedisHttpSession
 @Profile("!test")
@@ -27,9 +23,6 @@ public class SessionConfig {
         this.redisConfig = redisConfig;
     }
 
-    /**
-     * Configure Redis connection factory with credentials and settings.
-     */
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
@@ -43,22 +36,14 @@ public class SessionConfig {
         return new LettuceConnectionFactory(config);
     }
 
-    /**
-     * Configure RedisTemplate for general Redis operations.
-     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-        
-        // Use String serializer for keys
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        
-        // Use JSON serializer for values
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-        
         template.afterPropertiesSet();
         return template;
     }

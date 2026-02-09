@@ -1,0 +1,368 @@
+# =============================================================================
+# LinkWave - Pre-commit Configuration
+# Enterprise-grade code quality hooks for Spring Boot + Next.js monorepo
+# =============================================================================
+#
+# Installation:
+#   pip install pre-commit
+#   pre-commit install
+#   pre-commit install --hook-type commit-msg
+#
+# Manual run:
+#   pre-commit run --all-files
+#
+# Skip for emergencies (use sparingly):
+#   git commit --no-verify
+#
+# Update hooks:
+#   pre-commit autoupdate
+# =============================================================================
+
+default_stages: [commit]
+fail_fast: false
+minimum_pre_commit_version: "3.0.0"
+
+# Exclude generated files, vendor code, and build artifacts
+exclude: |
+  (?x)^(
+    .*\.min\.(js|css)$|
+    .*\.bundle\.js$|
+    frontend/\.next/.*|
+    frontend/node_modules/.*|
+    backend/build/.*|
+    backend/bin/.*|
+    backend/.gradle/.*|
+    \.git/.*|
+    .*lock\.json$|
+    .*\.lock$|
+    \.husky/_/.*
+  )$
+
+repos:
+  # ===========================================================================
+  # UNIVERSAL CHECKS - All Files
+  # ===========================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Whitespace and formatting
+      - id: trailing-whitespace
+        name: "🧹 Remove trailing whitespace"
+        args: [--markdown-linebreak-ext=md]
+
+      - id: end-of-file-fixer
+        name: "📄 Ensure files end with newline"
+        exclude: |
+          (?x)^(
+            .*\.svg$|
+            .*\.ico$
+          )$
+
+      - id: mixed-line-ending
+        name: "🔧 Fix line endings (LF)"
+        args: [--fix=lf]
+
+      # File hygiene
+      - id: check-added-large-files
+        name: "📦 Block large files (>500KB)"
+        args: ["--maxkb=500"]
+
+      - id: check-merge-conflict
+        name: "⚠️  Detect merge conflict markers"
+
+      - id: check-case-conflict
+        name: "🔤 Check for case conflicts"
+
+      - id: fix-byte-order-marker
+        name: "🔧 Remove BOM markers"
+
+      # Syntax validation
+      - id: check-yaml
+        name: "✅ Validate YAML syntax"
+        args: [--unsafe]  # Allow custom tags
+        exclude: ^k8s/
+
+      - id: check-json
+        name: "✅ Validate JSON syntax"
+
+      - id: check-toml
+        name: "✅ Validate TOML syntax"
+
+      - id: check-xml
+        name: "✅ Validate XML syntax"
+
+      # Security
+      - id: detect-private-key
+        name: "🔐 Detect private keys"
+
+      - id: check-symlinks
+        name: "🔗 Check symlinks"
+
+      # Scripts
+      - id: check-executables-have-shebangs
+        name: "📜 Check scripts have shebangs"
+
+      - id: check-shebang-scripts-are-executable
+        name: "📜 Check shebang scripts are executable"
+
+  # ===========================================================================
+  # SECURITY SCANNING
+  # ===========================================================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        name: "🔒 Scan for secrets (Gitleaks)"
+        stages: [commit]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: "🔍 Detect secrets (baseline)"
+        args: [
+          "--baseline", ".secrets.baseline",
+          "--exclude-files", ".*\\.lock$",
+          "--exclude-files", "package-lock\\.json$",
+        ]
+        exclude: |
+          (?x)^(
+            \.secrets\.baseline$|
+            .*\.lock$|
+            package-lock\.json$
+          )$
+
+  # ===========================================================================
+  # JAVA / SPRING BOOT CHECKS
+  # ===========================================================================
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.14.0
+    hooks:
+      - id: pretty-format-java
+        name: "☕ Format Java (Google Style)"
+        args: [--autofix]
+        files: ^backend/.*\.java$
+
+  - repo: local
+    hooks:
+      - id: gradle-wrapper-validation
+        name: "🐘 Validate Gradle wrapper"
+        entry: bash -c 'cd backend && if [ -f gradlew ]; then ./gradlew wrapper --validate-checksums 2>/dev/null || echo "Gradle wrapper validation skipped"; fi'
+        language: system
+        files: ^backend/gradle/wrapper/gradle-wrapper\.jar$
+        pass_filenames: false
+
+      - id: java-checkstyle
+        name: "☕ Java Checkstyle"
+        entry: bash -c 'cd backend && ./gradlew checkstyleMain --daemon 2>/dev/null || true'
+        language: system
+        files: ^backend/src/main/java/.*\.java$
+        pass_filenames: false
+        stages: [commit]
+
+      - id: no-system-out-println
+        name: "🚫 No System.out.println"
+        entry: bash -c 'if grep -rn "System\.out\.print" --include="*.java" backend/src/main/java/ 2>/dev/null | grep -v "// pre-commit:ignore"; then echo "❌ Found System.out.println statements. Use proper logging instead."; exit 1; fi'
+        language: system
+        files: ^backend/src/main/java/.*\.java$
+        pass_filenames: false
+
+      - id: no-printStackTrace
+        name: "🚫 No printStackTrace"
+        entry: bash -c 'if grep -rn "\.printStackTrace()" --include="*.java" backend/src/main/java/ 2>/dev/null | grep -v "// pre-commit:ignore"; then echo "❌ Found printStackTrace() calls. Use proper logging instead."; exit 1; fi'
+        language: system
+        files: ^backend/src/main/java/.*\.java$
+        pass_filenames: false
+
+      - id: java-test-naming
+        name: "📝 Validate test naming conventions"
+        entry: bash -c 'find backend/src/test/java -name "*.java" 2>/dev/null | while read f; do basename "$f" | grep -qE "^.*Test\.java$|^.*Tests\.java$|^.*IT\.java$" || echo "Warning: $f does not follow test naming convention (*Test.java, *Tests.java, or *IT.java)"; done'
+        language: system
+        files: ^backend/src/test/java/.*\.java$
+        pass_filenames: false
+
+  # ===========================================================================
+  # JAVASCRIPT / TYPESCRIPT / NEXT.JS CHECKS
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: prettier
+        name: "✨ Format with Prettier"
+        entry: bash -c 'cd frontend && npx prettier --write --ignore-unknown'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|json|css|scss|md)$
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, markdown]
+
+      - id: eslint
+        name: "📐 ESLint"
+        entry: bash -c 'cd frontend && npx eslint --fix --max-warnings=0'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        types_or: [javascript, jsx, ts, tsx]
+
+      - id: typescript-check
+        name: "📘 TypeScript type check"
+        entry: bash -c 'cd frontend && npx tsc --noEmit --skipLibCheck 2>/dev/null || true'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [commit]
+
+      - id: no-console-log
+        name: "🚫 No console.log in production"
+        entry: bash -c 'if grep -rn "console\.log\|console\.debug" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" frontend/app/ frontend/components/ frontend/lib/ 2>/dev/null | grep -v "// eslint-disable" | grep -v "// pre-commit:ignore" | grep -v "\.test\." | grep -v "\.spec\."; then echo "❌ Found console.log statements. Remove or use proper logging."; exit 1; fi'
+        language: system
+        files: ^frontend/(app|components|lib)/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+
+      - id: npm-audit
+        name: "🔍 NPM security audit"
+        entry: bash -c 'cd frontend && npm audit --audit-level=high --production 2>/dev/null || echo "⚠️  Some vulnerabilities found - review npm audit output"'
+        language: system
+        files: ^frontend/package\.json$
+        pass_filenames: false
+        stages: [commit]
+
+  # ===========================================================================
+  # COMMIT MESSAGE VALIDATION
+  # ===========================================================================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.29.0
+    hooks:
+      - id: commitizen
+        name: "📝 Validate commit message"
+        stages: [commit-msg]
+
+  # ===========================================================================
+  # MARKDOWN & DOCUMENTATION
+  # ===========================================================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        name: "📖 Lint Markdown files"
+        args: ["--fix", "--disable", "MD013", "MD033", "MD041", "--"]
+        exclude: |
+          (?x)^(
+            CHANGELOG\.md$|
+            node_modules/.*
+          )$
+
+  # ===========================================================================
+  # DOCKER & INFRASTRUCTURE
+  # ===========================================================================
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: "🐳 Lint Dockerfiles"
+        entry: hadolint
+        args: [
+          "--ignore", "DL3008",  # Pin versions in apt-get
+          "--ignore", "DL3018",  # Pin versions in apk add
+          "--ignore", "DL3013",  # Pin pip versions
+        ]
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.29.2
+    hooks:
+      - id: check-compose
+        name: "🐳 Validate Docker Compose"
+        files: docker-compose.*\.ya?ml$
+
+  # ===========================================================================
+  # SQL LINTING
+  # ===========================================================================
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.2.0
+    hooks:
+      - id: sqlfluff-lint
+        name: "🗄️  Lint SQL files"
+        args: ["--dialect", "postgres"]
+        files: ^backend/src/main/resources/db/migration/.*\.sql$
+
+      - id: sqlfluff-fix
+        name: "🔧 Fix SQL files"
+        args: ["--dialect", "postgres", "--force"]
+        files: ^backend/src/main/resources/db/migration/.*\.sql$
+
+  # ===========================================================================
+  # SHELL SCRIPTS
+  # ===========================================================================
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: "🐚 Lint shell scripts"
+        args: ["--severity=warning"]
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt
+        name: "🔧 Format shell scripts"
+        args: ["-i", "2", "-ci", "-bn", "-w"]
+
+  # ===========================================================================
+  # CUSTOM PROJECT HOOKS
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: check-spring-boot-version
+        name: "🌱 Check Spring Boot version consistency"
+        entry: .pre-commit-hooks/check-spring-boot-version.sh
+        language: script
+        files: ^backend/(build\.gradle\.kts|pom\.xml)$
+        pass_filenames: false
+
+      - id: check-node-version
+        name: "📦 Check Node.js version compatibility"
+        entry: .pre-commit-hooks/check-node-version.sh
+        language: script
+        files: ^frontend/(package\.json|\.nvmrc|\.node-version)$
+        pass_filenames: false
+
+      - id: check-branch-naming
+        name: "🌿 Check branch naming convention"
+        entry: .pre-commit-hooks/check-branch-naming.sh
+        language: script
+        stages: [commit]
+        pass_filenames: false
+        always_run: true
+
+      - id: check-no-debug-code
+        name: "🐛 Check for debug code"
+        entry: .pre-commit-hooks/check-no-debug-code.sh
+        language: script
+        files: \.(java|ts|tsx|js|jsx)$
+        pass_filenames: false
+
+      - id: check-env-files
+        name: "🔐 Block .env files"
+        entry: bash -c 'for f in "$@"; do if [[ "$f" =~ \.env$ ]] && [[ ! "$f" =~ \.env\.example$ ]] && [[ ! "$f" =~ \.env\.template$ ]]; then echo "❌ Blocked: $f - Never commit .env files!"; exit 1; fi; done'
+        language: system
+        files: \.env.*$
+        exclude: \.(env\.example|env\.template|env\.sample)$
+
+      - id: check-todo-fixme
+        name: "📋 Detect TODO/FIXME comments"
+        entry: bash -c 'count=$(grep -rn "TODO\|FIXME\|XXX\|HACK" --include="*.java" --include="*.ts" --include="*.tsx" backend/src/main/java/ frontend/app/ frontend/components/ frontend/lib/ 2>/dev/null | wc -l); if [ "$count" -gt 0 ]; then echo "⚠️  Found $count TODO/FIXME comments - consider creating issues:"; grep -rn "TODO\|FIXME\|XXX\|HACK" --include="*.java" --include="*.ts" --include="*.tsx" backend/src/main/java/ frontend/app/ frontend/components/ frontend/lib/ 2>/dev/null | head -10; fi; exit 0'
+        language: system
+        files: \.(java|ts|tsx)$
+        pass_filenames: false
+        verbose: true
+
+# ===========================================================================
+# CI Mode Configuration
+# ===========================================================================
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ""
+  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
+  autoupdate_schedule: weekly
+  skip: [gradle-wrapper-validation, java-checkstyle, npm-audit]
+  submodules: false

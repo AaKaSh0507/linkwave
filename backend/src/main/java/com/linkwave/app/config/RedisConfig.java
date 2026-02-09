@@ -4,38 +4,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-/**
- * Configuration properties for Redis connection and session management.
- * Values are loaded from application.yml or environment variables.
- */
 @Configuration
 @ConfigurationProperties(prefix = "linkwave.redis")
 @Profile("!test")
 public class RedisConfig {
 
-    /**
-     * Redis server host.
-     */
     private String host = "localhost";
-
-    /**
-     * Redis server port.
-     */
     private int port = 6379;
-
-    /**
-     * Redis authentication password (optional).
-     */
     private String password;
-
-    /**
-     * Session timeout in minutes.
-     */
     private int sessionTimeoutMinutes = 30;
-
-    /**
-     * Redis namespace prefix for session keys.
-     */
     private String namespace = "linkwave:session:";
 
     public String getHost() {

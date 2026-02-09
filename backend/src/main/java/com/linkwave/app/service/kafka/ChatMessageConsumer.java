@@ -10,14 +10,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Kafka consumer for chat messages (Phase D).
- * 
- * Responsibilities:
- * 1. Consume messages from "chat.messages" topic
- * 2. Persist to database via ChatService
- * 3. Broadcast to room subscribers via STOMP
- */
 @Service
 public class ChatMessageConsumer {
 
@@ -51,17 +43,14 @@ public class ChatMessageConsumer {
         );
 
         try {
-            // 1. Persist to database
             chatService.persistMessage(message);
             log.debug("Persisted message {} to DB", message.getMessageId());
-
-            // 2. Broadcast to room subscribers via STOMP
             messagingTemplate.convertAndSend("/topic/room." + message.getRoomId(), message);
             log.debug("Broadcasted message {} to /topic/room.{}", message.getMessageId(), message.getRoomId());
-            
+
         } catch (Exception e) {
             log.error("Failed to process message {}: {}", message.getMessageId(), e.getMessage(), e);
-            throw e; // Re-throw to trigger Kafka retry
+            throw e;
         }
     }
 }

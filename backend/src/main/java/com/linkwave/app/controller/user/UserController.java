@@ -15,10 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
-/**
- * REST controller for authenticated user operations.
- * All endpoints require authenticated session.
- */
 @RestController
 @RequestMapping("/api/v1/user")
 public class UserController {
@@ -32,21 +28,11 @@ public class UserController {
         this.sessionService = sessionService;
     }
 
-    /**
-     * Get current authenticated user profile.
-     * Returns masked phone number and authentication timestamp.
-     * 
-     * @return user profile payload
-     */
     @GetMapping("/me")
     public ResponseEntity<UserProfilePayload> getCurrentUser() {
-        // Check if Spring Security authentication is present (for tests with
-        // @WithMockUser)
         Authentication springAuth = SecurityContextHolder.getContext().getAuthentication();
         if (springAuth != null && springAuth.isAuthenticated() &&
                 !"anonymousUser".equals(springAuth.getPrincipal())) {
-
-            // Try to get from session first
             AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
                     .orElse(null);
 
@@ -65,20 +51,12 @@ public class UserController {
             return ResponseEntity.ok(profile);
         }
 
-        // No authentication
         log.warn("Unauthorized access attempt to /me endpoint");
         return ResponseEntity.status(401).build();
     }
 
-    /**
-     * Get user's contacts.
-     * Returns empty list for now - will be populated from chat rooms in the future.
-     * 
-     * @return empty list of contacts
-     */
     @GetMapping("/contacts")
     public ResponseEntity<java.util.List<Object>> getContacts() {
-        // Verify authentication
         AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
                 .orElse(null);
 
@@ -88,9 +66,6 @@ public class UserController {
         }
 
         log.info("Contacts accessed by: {}", userContext.getMaskedPhoneNumber());
-
-        // Return empty list for now
-        // TODO: Populate from chat rooms or user relationships
         return ResponseEntity.ok(java.util.Collections.emptyList());
     }
 }

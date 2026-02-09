@@ -8,9 +8,6 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 import java.util.Properties;
 
-/**
- * Configuration for JavaMailSender with SMTP settings.
- */
 @Configuration
 public class MailConfig {
 

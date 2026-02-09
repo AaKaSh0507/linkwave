@@ -5,26 +5,18 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-/**
- * Development utility to create a test room on startup.
- * Phase D: Testing helper
- * 
- * Remove or disable in production.
- */
 @Component
 public class ChatDevInitializer {
-    
+
     private final ChatService chatService;
-    
+
     public ChatDevInitializer(ChatService chatService) {
         this.chatService = chatService;
     }
-    
+
     @EventListener(ApplicationReadyEvent.class)
     public void initTestData() {
         try {
-            // Create a test room for demo purposes
-            // Users can test with phone numbers they've authenticated with
             System.out.println("=".repeat(80));
             System.out.println("Phase D: Real-time Messaging System Ready");
             System.out.println("=".repeat(80));

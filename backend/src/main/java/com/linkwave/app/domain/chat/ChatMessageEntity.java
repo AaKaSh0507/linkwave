@@ -3,12 +3,6 @@ package com.linkwave.app.domain.chat;
 import jakarta.persistence.*;
 import java.time.Instant;
 
-/**
- * JPA Entity for persisting chat messages.
- * 
- * Phase D: Room-based messaging
- * Messages belong to rooms and are sent by members.
- */
 @Entity
 @Table(name = "chat_messages", indexes = {
         @Index(name = "idx_chat_message_room_sent_at", columnList = "room_id, sent_at"),
@@ -18,7 +12,7 @@ public class ChatMessageEntity {
 
     @Id
     @Column(name = "id", length = 36)
-    private String id; // UUID string
+    private String id; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)

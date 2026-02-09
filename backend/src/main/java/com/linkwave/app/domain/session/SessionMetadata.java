@@ -2,10 +2,6 @@ package com.linkwave.app.domain.session;
 
 import java.time.Instant;
 
-/**
- * Metadata for a user session stored in Redis.
- * Contains session identification, timestamps, and associated user data.
- */
 public class SessionMetadata {
 
     private final String sessionId;

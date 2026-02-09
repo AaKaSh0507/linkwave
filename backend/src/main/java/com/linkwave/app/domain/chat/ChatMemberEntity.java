@@ -3,14 +3,8 @@ package com.linkwave.app.domain.chat;
 import jakarta.persistence.*;
 import java.time.Instant;
 
-/**
- * JPA Entity for chat room members.
- * 
- * Phase D: Room membership tracking
- * Maps users to rooms with metadata like join time and last read.
- */
 @Entity
-@Table(name = "chat_members", 
+@Table(name = "chat_members",
        uniqueConstraints = @UniqueConstraint(columnNames = {"room_id", "phone_number"}),
        indexes = {
         @Index(name = "idx_chat_member_phone", columnList = "phone_number"),
@@ -43,8 +37,6 @@ public class ChatMemberEntity {
         this.phoneNumber = phoneNumber;
         this.joinedAt = joinedAt;
     }
-
-    // Getters and Setters
 
     public Long getId() {
         return id;

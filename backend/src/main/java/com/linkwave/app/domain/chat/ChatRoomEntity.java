@@ -5,12 +5,6 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * JPA Entity for chat rooms.
- * 
- * Phase D: Room-based messaging
- * Supports both direct (1-1) and group chats.
- */
 @Entity
 @Table(name = "chat_rooms", indexes = {
         @Index(name = "idx_chat_room_type", columnList = "room_type"),
@@ -20,14 +14,14 @@ public class ChatRoomEntity {
 
     @Id
     @Column(name = "id", length = 36)
-    private String id; // UUID string
+    private String id;
 
     @Column(name = "room_type", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private RoomType roomType;
 
     @Column(name = "name", length = 255)
-    private String name; // Optional name for group chats
+    private String name;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -39,8 +33,8 @@ public class ChatRoomEntity {
     private Set<ChatMemberEntity> members = new HashSet<>();
 
     public enum RoomType {
-        DIRECT,  // 1-1 chat
-        GROUP    // Group chat
+        DIRECT,
+        GROUP
     }
 
     public ChatRoomEntity() {
@@ -53,8 +47,6 @@ public class ChatRoomEntity {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
-
-    // Getters and Setters
 
     public String getId() {
         return id;

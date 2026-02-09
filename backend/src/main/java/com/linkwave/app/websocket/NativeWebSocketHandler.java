@@ -28,38 +28,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Native WebSocket handler for real-time messaging.
- * 
- * Handles WebSocket connections at /ws endpoint using native WebSocket protocol
- * (not STOMP). Messages are exchanged as JSON text frames.
- * 
- * Authentication:
- * - Session-based authentication via WsAuthenticationInterceptor
- * - Phone number available in session attributes
- * 
- * Message Flow:
- * - Client connects with session cookie
- * - Client sends JSON messages
- * - Server broadcasts to relevant recipients
- * 
- * Phase D1: Presence Tracking
- * - Tracks user online/offline status via PresenceService
- * - Handles presence.heartbeat messages to refresh TTL
- * - Multi-device support via connection counting
- * 
- * Phase D2: Typing Indicators
- * - Handles typing.start and typing.stop messages
- * - Broadcasts typing events to room members (excluding sender)
- * - Auto-cleanup on disconnect and timeout (5 seconds)
- * - Rate limiting (2 seconds minimum between typing.start)
- * 
- * Phase D3: Read Receipts
- * - Handles read.up_to messages for marking messages as read
- * - Persists read receipts to database with idempotency
- * - Broadcasts read.receipt events to room members (excluding reader)
- * - Supports batch reads (up to 50 messages)
- */
 @Component
 public class NativeWebSocketHandler extends TextWebSocketHandler {
 
@@ -102,16 +70,11 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Store session
         sessionManager.registerSession(phoneNumber, session);
-
-        // Mark user as online (Phase D1: Presence Tracking)
         presenceService.markOnline(phoneNumber);
 
         log.info("WebSocket connection established for user: {} (sessionId: {})",
                 maskPhoneNumber(phoneNumber), session.getId());
-
-        // Send connection acknowledgment
         sendMessage(session, "{\"event\":\"connection.ack\",\"status\":\"connected\"}");
     }
 
@@ -121,8 +84,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         String payload = message.getPayload();
 
         log.debug("Received message from {}: {}", maskPhoneNumber(phoneNumber), payload);
-
-        // Parse message type
         try {
             JsonNode jsonNode = objectMapper.readTree(payload);
             String messageType = jsonNode.has("event") ? jsonNode.get("event").asText() : null;
@@ -135,7 +96,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
-            // Handle different message types
             switch (messageType) {
                 case "ping":
                     handlePing(session, phoneNumber);
@@ -175,9 +135,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Handle ping message.
-     */
     private void handlePing(WebSocketSession session, String userId) {
         sendMessage(session, "{\"event\":\"pong\",\"timestamp\":" + System.currentTimeMillis() + "}");
     }
@@ -185,8 +142,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
     private void handleChatSend(WebSocketSession session, String userId, JsonNode jsonNode) {
         try {
             WsMessageEnvelope envelope = objectMapper.treeToValue(jsonNode, WsMessageEnvelope.class);
-
-            // Extract body from payload
             String body = "";
             if (envelope.getPayload() != null) {
                 if (envelope.getPayload().has("body")) {
@@ -196,11 +151,8 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
                 }
             }
 
-            // In Phase D, sendMessage handles validation and Kafka publishing
             chatService.sendMessage(envelope.getTo(), userId, body);
-
-            // Send acknowledgment (chat.sent)
-            String messageId = java.util.UUID.randomUUID().toString(); // Placeholder
+            String messageId = java.util.UUID.randomUUID().toString();
             sendMessage(session,
                     String.format("{\"event\":\"chat.sent\",\"payload\":{\"messageId\":\"%s\"}}", messageId));
 
@@ -209,10 +161,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Handle presence heartbeat message.
-     * Refreshes user's presence TTL in Redis.
-     */
     private void handlePresenceHeartbeat(WebSocketSession session, String phoneNumber) {
         boolean success = presenceService.recordHeartbeat(phoneNumber);
 
@@ -228,12 +176,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Handle typing.start message.
-     * Validates room membership, updates typing state, and broadcasts to room
-     * members.
-     * Phase D2: Typing Indicators
-     */
     private void handleTypingStart(WebSocketSession session, String userId, JsonNode payload) {
         String roomId = payload.has("roomId") ? payload.get("roomId").asText() : null;
 
@@ -242,14 +184,11 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Validate room membership
         if (!roomMembershipService.isUserInRoom(userId, roomId)) {
             log.warn("User {} not in room {}, ignoring typing.start",
                     maskPhoneNumber(userId), roomId);
             return;
         }
-
-        // Mark typing (with rate limiting)
         boolean accepted = typingStateManager.markTypingStart(roomId, userId, session.getId());
 
         if (!accepted) {
@@ -257,16 +196,9 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
                     maskPhoneNumber(userId), roomId);
             return;
         }
-
-        // Broadcast to room members
         broadcastTypingEvent(roomId, userId, TypingEvent.TypingAction.START);
     }
 
-    /**
-     * Handle typing.stop message.
-     * Updates typing state and broadcasts to room members.
-     * Phase D2: Typing Indicators
-     */
     private void handleTypingStop(WebSocketSession session, String userId, JsonNode payload) {
         String roomId = payload.has("roomId") ? payload.get("roomId").asText() : null;
 
@@ -274,18 +206,10 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             log.warn("typing.stop missing roomId from user {}", maskPhoneNumber(userId));
             return;
         }
-
-        // Mark stopped
         typingStateManager.markTypingStop(roomId, userId, session.getId());
-
-        // Broadcast to room members
         broadcastTypingEvent(roomId, userId, TypingEvent.TypingAction.STOP);
     }
 
-    /**
-     * Broadcast typing event to all room members except the sender.
-     * Phase D2: Typing Indicators
-     */
     private void broadcastTypingEvent(String roomId, String senderId, TypingEvent.TypingAction action) {
         try {
             Set<String> members = roomMembershipService.getRoomMembers(roomId);
@@ -296,7 +220,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
             TypingEvent event = new TypingEvent(senderId, roomId, action);
             String json = objectMapper.writeValueAsString(event);
 
-            // Send to all members except sender
             for (String memberId : members) {
                 if (!memberId.equals(senderId)) {
                     sendToUser(memberId, json);
@@ -311,12 +234,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Handle read.up_to message.
-     * Marks messages as read up to the specified message ID and broadcasts
-     * receipts.
-     * Phase D3: Read Receipts
-     */
     private void handleReadUpTo(WebSocketSession session, String userId, JsonNode payload) {
         String roomId = payload.has("roomId") ? payload.get("roomId").asText() : null;
         String messageId = payload.has("messageId") ? payload.get("messageId").asText() : null;
@@ -328,16 +245,11 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
-            // Mark messages as read (batch operation up to 50 messages)
             List<ReadReceiptResult> results = readReceiptService.markReadUpTo(
                     roomId, messageId, userId);
-
-            // Fetch members and broadcast only if there are new reads
             boolean hasNewReads = results.stream().anyMatch(ReadReceiptResult::isNewRead);
             if (hasNewReads) {
                 Set<String> members = roomMembershipService.getRoomMembers(roomId);
-
-                // Broadcast each new read receipt
                 for (ReadReceiptResult result : results) {
                     if (result.isNewRead()) {
                         broadcastReadReceipt(result.getReceipt(), members);
@@ -358,10 +270,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Broadcast read receipt to all room members except the reader.
-     * Phase D3: Read Receipts
-     */
     private void broadcastReadReceipt(ReadReceiptEntity receipt, Set<String> members) {
         try {
             if (members.isEmpty()) {
@@ -376,7 +284,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
             String json = objectMapper.writeValueAsString(event);
 
-            // Send to all members except the reader
             for (String memberId : members) {
                 if (!memberId.equals(receipt.getReaderPhoneNumber())) {
                     sendToUser(memberId, json);
@@ -398,12 +305,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
         if (phoneNumber != null) {
             sessionManager.deregisterSession(session);
-
-            // Mark user disconnect (Phase D1: Presence Tracking)
-            // TTL will handle final offline status
             presenceService.markDisconnect(phoneNumber);
-
-            // Clear typing state and broadcast (Phase D2: Typing Indicators)
             List<String> affectedRooms = typingStateManager.clearUserTyping(phoneNumber, session.getId());
             for (String roomId : affectedRooms) {
                 broadcastTypingEvent(roomId, phoneNumber, TypingEvent.TypingAction.STOP);
@@ -426,9 +328,6 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Send a message to a specific session.
-     */
     private void sendMessage(WebSocketSession session, String message) {
         try {
             if (session.isOpen()) {
@@ -441,16 +340,10 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Broadcast a message to a specific user by phone number.
-     */
     public void sendToUser(String phoneNumber, String message) {
         sessionManager.getSession(phoneNumber).ifPresent(session -> sendMessage(session, message));
     }
 
-    /**
-     * Get count of active connections.
-     */
     public int getActiveConnectionCount() {
         return sessionManager.getActiveSessionCount();
     }

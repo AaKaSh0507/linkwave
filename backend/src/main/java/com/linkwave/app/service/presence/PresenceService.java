@@ -181,9 +181,6 @@ public class PresenceService {
         return userId.substring(0, 4) + "***" + userId.substring(userId.length() - 2);
     }
 
-    /**
-     * Resets the heartbeat time for a user. Used for testing.
-     */
     public void resetHeartbeatTime(String userId) {
         lastHeartbeatTime.remove(userId);
     }

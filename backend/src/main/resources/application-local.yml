@@ -1,34 +1,32 @@
-# Local development configuration
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/linkwave
-    username: linkwave
-    password: changeme
-  
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/linkwave}
+    username: ${DATABASE_USERNAME:linkwave}
+    password: ${DATABASE_PASSWORD:changeme}
+
   data:
     redis:
-      host: localhost
-      port: 6380
-      password: changeme
-  
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:changeme}
+
   kafka:
-    bootstrap-servers: localhost:29092
-  
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+
   mail:
-    host: localhost
-    port: 1025
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     properties:
       mail:
         smtp:
           auth: false
           starttls:
-            enable: false
+            enable: ${MAIL_TLS_ENABLED:false}
 
 # Linkwave custom config for local dev
 linkwave:
   mail:
-    host: localhost
-    port: 1025
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     from: no-reply@linkwave.local
-    tls-enabled: false
-    dev-mode: true  # Log OTP to console instead of sending email
+    tls-enabled: ${MAIL_TLS_ENABLED:false}

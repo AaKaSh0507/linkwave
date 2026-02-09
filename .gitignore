@@ -1,40 +1,55 @@
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
+# Environment
+.env
+.env.local
+.env.*.local
 
-# IDE
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
 .idea/
+*.iml
 .vscode/
 *.swp
 *.swo
 *~
 
+# Backend (Java/Gradle)
+backend/build/
+backend/bin/
+backend/.gradle/
+backend/*.jar
+backend/*.war
+backend/out/
+backend/.settings/
+backend/.project
+backend/.classpath
+
+# Frontend (Next.js/Node)
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.cache/
+frontend/*.tsbuildinfo
+
 # Logs
 *.log
+logs/
 
-# Temporary files
-tmp/
-temp/
-cookies.txt
-
-# Documentation artifacts (planning docs)
-/Documentation/*.pdf
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Docker
-docker-compose.override.yml
-
-# Node modules (redundant but explicit)
-node_modules/
+# Test & Coverage
+coverage/
+*.lcov
+.nyc_output/
 
 # Build artifacts
-build/
-.gradle/
-bin/
-.next/
-out/
+dist/
+tmp/
+
+# Docker
+docker/nginx/ssl/
+
+# Backups
+backups/

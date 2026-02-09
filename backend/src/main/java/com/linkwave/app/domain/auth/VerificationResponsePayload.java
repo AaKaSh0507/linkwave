@@ -1,10 +1,7 @@
 package com.linkwave.app.domain.auth;
 
-/**
- * Response payload for OTP verification.
- */
 public class VerificationResponsePayload {
-    
+
     private final boolean authenticated;
     private final String message;
 

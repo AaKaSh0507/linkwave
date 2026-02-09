@@ -85,6 +85,18 @@ management:
     health:
       show-details: when-authorized
 
+# OpenAPI / Swagger UI Configuration
+springdoc:
+  swagger-ui:
+    path: /docs
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  show-actuator: false
+
 # Linkwave Application Configuration
 linkwave:
   auth:

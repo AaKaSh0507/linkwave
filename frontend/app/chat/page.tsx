@@ -10,6 +10,7 @@ import { ContactSearch } from '@/components/chat/contact-search'
 import { ChatProvider, useChat } from '@/lib/chat-context'
 import { useAuth } from '@/lib/auth-context'
 import { cn } from '@/lib/utils'
+import type { User } from '@/lib/types'
 
 function ChatContent() {
   const router = useRouter()
@@ -51,7 +52,7 @@ function ChatContent() {
     router.push('/auth')
   }
 
-  const handleSelectContact = async (user: typeof import('@/lib/types').User) => {
+  const handleSelectContact = async (user: User) => {
     try {
       addParticipant(user)
       const conversation = await getOrCreateConversation(user.id)

@@ -4,11 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-/**
- * Request payload for OTP generation.
- */
 public class OtpRequestPayload {
-    
+
     @NotBlank(message = "Phone number is required")
     @Pattern(
         regexp = "^\\+?[1-9]\\d{1,14}$",

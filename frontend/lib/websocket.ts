@@ -101,7 +101,7 @@ export class ChatWebSocket {
     }
   }
 
-  private send(type: string, payload: any) {
+  send(type: string, payload: any) {
     const message = JSON.stringify({ type, payload })
 
     if (config.features.enableDebugLogging) {

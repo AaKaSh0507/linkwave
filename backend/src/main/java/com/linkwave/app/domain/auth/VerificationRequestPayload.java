@@ -3,11 +3,8 @@ package com.linkwave.app.domain.auth;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-/**
- * Request payload for OTP verification.
- */
 public class VerificationRequestPayload {
-    
+
     @NotBlank(message = "Phone number is required")
     @Pattern(
         regexp = "^\\+?[1-9]\\d{1,14}$",

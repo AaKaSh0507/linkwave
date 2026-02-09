@@ -3,19 +3,7 @@ package com.linkwave.app.domain.websocket;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
-/**
- * WebSocket message envelope for all client-server communication.
- * Defines the application protocol for realtime messaging.
- * 
- * Format:
- * {
- * "event": "ping|pong|chat.send",
- * "to": "+1234567890", // optional, used for chat.send
- * "payload": {} // event-specific payload
- * }
- */
 public class WsMessageEnvelope {
 
     @NotBlank(message = "Event field is required")
@@ -61,15 +49,12 @@ public class WsMessageEnvelope {
         this.payload = payload;
     }
 
-    /**
-     * Supported event types for Phase C1.
-     */
     public enum EventType {
         PING("ping"),
         PONG("pong"),
         CHAT_SEND("chat.send"),
-        CHAT_SENT("chat.sent"), // Acknowledgment sent to client after Kafka publish
-        CHAT_RECEIVE("chat.receive"); // Incoming message for recipient
+        CHAT_SENT("chat.sent"),
+        CHAT_RECEIVE("chat.receive");
 
         private final String value;
 
