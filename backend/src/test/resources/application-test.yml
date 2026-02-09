@@ -37,8 +37,8 @@ spring:
   data:
     redis:
       host: localhost
-      port: 6379
-      password: ${REDIS_PASSWORD:linkwave_redis_pass}
+      port: 6380
+      password: ${REDIS_PASSWORD:changeme}
       repositories:
         enabled: false
 
