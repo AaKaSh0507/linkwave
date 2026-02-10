@@ -158,7 +158,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         updated.set(userId, {
           ...user,
           status,
-          lastSeen: new Date(),
+          lastSeen: new Date().toISOString(),
         })
       }
       return updated

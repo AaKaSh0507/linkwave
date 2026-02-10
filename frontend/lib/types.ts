@@ -4,7 +4,7 @@ export interface User {
   displayName?: string
   profilePicture?: string
   status: 'online' | 'offline'
-  lastSeen?: Date
+  lastSeen?: string
 }
 
 export interface Message {
@@ -12,28 +12,17 @@ export interface Message {
   conversationId: string
   senderId: string
   content: string
-  timestamp: Date
+  timestamp: string
   isRead: boolean
-  readAt?: Date
+  readAt?: string
 }
 
 export interface Conversation {
   id: string
   participantIds: string[]
   lastMessage?: Message
-  lastMessageTime?: Date
+  lastMessageTime?: string
   unreadCount: number
-}
-
-export interface OTPResponse {
-  success: boolean
-  message: string
-  otpId?: string
-}
-
-export interface VerifyOTPRequest {
-  otpId: string
-  otp: string
 }
 
 export interface AuthResponse {
@@ -45,10 +34,6 @@ export interface AuthResponse {
   }
 }
 
-export interface ConversationMessage extends Message {
-  sender: User
-}
-
 export interface TypingIndicator {
   conversationId: string
   userId: string
@@ -58,11 +43,31 @@ export interface TypingIndicator {
 export interface PresenceUpdate {
   userId: string
   status: 'online' | 'offline'
-  lastSeen: Date
+  lastSeen: string
 }
 
 export interface ReadReceipt {
   messageId: string
   userId: string
-  readAt: Date
+  readAt: string
 }
+
+export interface PaginationMetadata {
+  hasMore: boolean
+  oldestTimestamp?: string
+}
+
+export interface MessageHistoryResponse {
+  messages: Message[]
+  pagination: PaginationMetadata
+}
+
+export interface MessageHistoryState {
+  messages: Message[]
+  oldestTimestamp: string | null
+  hasMoreMessages: boolean
+  isLoadingHistory: boolean
+  isInitialLoadComplete: boolean
+  error: string | null
+}
+

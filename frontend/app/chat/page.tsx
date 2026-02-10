@@ -18,7 +18,6 @@ function ChatContent() {
   const {
     conversations,
     currentConversation,
-    messages,
     participants,
     currentUser,
     isLoading,
@@ -26,7 +25,6 @@ function ChatContent() {
     setCurrentConversation,
     sendMessage,
     fetchConversations,
-    fetchMessages,
     sendTypingIndicator,
     getOrCreateConversation,
     addParticipant,
@@ -35,17 +33,9 @@ function ChatContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showContactSearch, setShowContactSearch] = useState(false)
 
-  // Fetch conversations on mount
   useEffect(() => {
     fetchConversations()
   }, [fetchConversations])
-
-  // Fetch messages when conversation changes
-  useEffect(() => {
-    if (currentConversation) {
-      fetchMessages(currentConversation.id)
-    }
-  }, [currentConversation, fetchMessages])
 
   const handleLogout = () => {
     logout()
@@ -169,7 +159,6 @@ function ChatContent() {
 
             <MessageThread
               conversation={currentConversation}
-              messages={messages}
               participants={participants}
               currentUserId={currentUser.id}
               typingUsers={typingUsers}
