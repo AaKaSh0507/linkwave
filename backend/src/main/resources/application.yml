@@ -1,14 +1,14 @@
 spring:
   application:
     name: linkwave
-  
+
   # Database Configuration
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/linkwave}
     username: ${DATABASE_USERNAME:linkwave}
     password: ${DATABASE_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
-  
+
   # JPA Configuration
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -18,7 +18,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  
+
   # Mail Configuration
   mail:
     host: ${MAIL_HOST:}
@@ -35,7 +35,7 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
-  
+
   # Session Configuration
   session:
     store-type: redis
@@ -45,7 +45,7 @@ spring:
       namespace: ${SESSION_NAMESPACE:linkwave:session:}
       flush-mode: on_save
 
-  
+
   # Kafka Configuration
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -105,7 +105,7 @@ linkwave:
       ttl-seconds: ${OTP_TTL_SECONDS:300}
       throttle-max-requests: ${OTP_THROTTLE_MAX_REQUESTS:3}
       throttle-window-seconds: ${OTP_THROTTLE_WINDOW_SECONDS:600}
-  
+
   mail:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
@@ -113,10 +113,18 @@ linkwave:
     password: ${MAIL_PASSWORD:}
     from: ${MAIL_FROM:no-reply@linkwave.app}
     tls-enabled: ${MAIL_TLS_ENABLED:true}
-  
+
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD:}
     session-timeout-minutes: ${SESSION_TIMEOUT_MINUTES:30}
     namespace: ${SESSION_NAMESPACE:linkwave:session:}
+
+  retention:
+    days: ${RETENTION_DAYS:7}
+    batch-size: ${RETENTION_BATCH_SIZE:1000}
+    cron: ${RETENTION_CRON:0 0 2 ? * SUN}
+    max-retries: ${RETENTION_MAX_RETRIES:3}
+    retry-delay-ms: ${RETENTION_RETRY_DELAY_MS:1000}
+
