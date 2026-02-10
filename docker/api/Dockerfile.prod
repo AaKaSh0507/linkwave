@@ -23,6 +23,7 @@ COPY gradle gradle
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
 COPY gradle.properties .
+COPY checkstyle.xml .
 
 # Make gradlew executable
 RUN chmod +x gradlew

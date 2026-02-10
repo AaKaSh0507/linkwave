@@ -34,7 +34,7 @@ public class TypingCleanupBroadcaster {
         this.objectMapper = objectMapper;
     }
 
-    
+
     @Scheduled(fixedDelay = 2000, initialDelay = 3000)
     public void broadcastExpiredTyping() {
         List<TypingStateManager.ExpiredTypingState> expired = typingStateManager.cleanupStaleTyping();
@@ -44,12 +44,12 @@ public class TypingCleanupBroadcaster {
         }
     }
 
-    
+
     private void broadcastTypingStop(String roomId, String senderId) {
         try {
             Set<String> members = roomMembershipService.getRoomMembers(roomId);
             if (members.isEmpty()) {
-                return; 
+                return;
             }
 
             TypingEvent event = new TypingEvent(senderId, roomId, TypingEvent.TypingAction.STOP);

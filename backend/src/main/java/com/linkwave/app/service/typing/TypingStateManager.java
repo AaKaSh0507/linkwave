@@ -16,32 +16,32 @@ public class TypingStateManager {
 
     private static final Logger log = LoggerFactory.getLogger(TypingStateManager.class);
 
-    
+
     private static final long TYPING_TIMEOUT_SECONDS = 5;
     private static final long RATE_LIMIT_SECONDS = 2;
 
-    
+
     private final Map<String, Set<TypingState>> roomTypingState = new ConcurrentHashMap<>();
 
-    
+
     private final Map<String, Instant> lastTypingStart = new ConcurrentHashMap<>();
 
-    
+
     public boolean markTypingStart(String roomId, String userId, String sessionId) {
         String rateLimitKey = userId + ":" + roomId;
         Instant now = Instant.now();
 
-        
+
         Instant lastStart = lastTypingStart.get(rateLimitKey);
         if (lastStart != null && now.isBefore(lastStart.plusSeconds(RATE_LIMIT_SECONDS))) {
             log.debug("Rate limited typing.start for user {} in room {}", maskUserId(userId), roomId);
             return false;
         }
 
-        
+
         lastTypingStart.put(rateLimitKey, now);
 
-        
+
         roomTypingState.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet())
                 .add(new TypingState(userId, sessionId, now));
 
@@ -49,13 +49,13 @@ public class TypingStateManager {
         return true;
     }
 
-    
+
     public void markTypingStop(String roomId, String userId, String sessionId) {
         Set<TypingState> typingUsers = roomTypingState.get(roomId);
         if (typingUsers != null) {
             typingUsers.removeIf(state -> state.userId.equals(userId) && state.sessionId.equals(sessionId));
 
-            
+
             if (typingUsers.isEmpty()) {
                 roomTypingState.remove(roomId);
             }
@@ -64,7 +64,7 @@ public class TypingStateManager {
         }
     }
 
-    
+
     public Set<String> getTypingUsers(String roomId) {
         Set<TypingState> typingUsers = roomTypingState.get(roomId);
         if (typingUsers == null || typingUsers.isEmpty()) {
@@ -76,7 +76,7 @@ public class TypingStateManager {
                 .collect(Collectors.toSet());
     }
 
-    
+
     public List<String> clearUserTyping(String userId, String sessionId) {
         List<String> affectedRooms = new ArrayList<>();
 
@@ -91,7 +91,7 @@ public class TypingStateManager {
                 affectedRooms.add(roomId);
             }
 
-            
+
             if (typingUsers.isEmpty()) {
                 roomTypingState.remove(roomId);
             }
@@ -102,13 +102,13 @@ public class TypingStateManager {
                     maskUserId(userId), affectedRooms.size());
         }
 
-        
+
         lastTypingStart.entrySet().removeIf(e -> e.getKey().startsWith(userId + ":"));
 
         return affectedRooms;
     }
 
-    
+
     @Scheduled(fixedDelay = 2000)
     public List<ExpiredTypingState> cleanupStaleTyping() {
         Instant cutoff = Instant.now().minusSeconds(TYPING_TIMEOUT_SECONDS);
@@ -127,7 +127,7 @@ public class TypingStateManager {
                 expired.add(new ExpiredTypingState(roomId, state.userId, state.sessionId));
             }
 
-            
+
             if (typingUsers.isEmpty()) {
                 roomTypingState.remove(roomId);
             }
@@ -140,7 +140,7 @@ public class TypingStateManager {
         return expired;
     }
 
-    
+
     public TypingStats getStats() {
         int totalRooms = roomTypingState.size();
         int totalTypingUsers = roomTypingState.values().stream()
@@ -150,7 +150,7 @@ public class TypingStateManager {
         return new TypingStats(totalRooms, totalTypingUsers);
     }
 
-    
+
     private static class TypingState {
         final String userId;
         final String sessionId;
@@ -178,7 +178,7 @@ public class TypingStateManager {
         }
     }
 
-    
+
     public static class ExpiredTypingState {
         public final String roomId;
         public final String userId;
@@ -191,7 +191,7 @@ public class TypingStateManager {
         }
     }
 
-    
+
     public static class TypingStats {
         public final int activeRooms;
         public final int typingUsers;

@@ -35,9 +35,9 @@ public class AuthController {
     @PostMapping("/request-otp")
     public ResponseEntity<Map<String, String>> requestOtp(
             @Valid @RequestBody OtpRequestPayload payload) {
-        
+
         otpService.requestOtp(payload.getPhoneNumber(), payload.getEmail());
-        
+
         return ResponseEntity.ok(Map.of(
             "message", "OTP sent successfully"
         ));
@@ -46,11 +46,11 @@ public class AuthController {
     @PostMapping("/verify-otp")
     public ResponseEntity<VerificationResponsePayload> verifyOtp(
             @Valid @RequestBody VerificationRequestPayload payload) {
-        
+
         otpService.verifyOtp(payload.getPhoneNumber(), payload.getOtp());
         AuthenticatedUserContext userContext = sessionService.authenticateSession(payload.getPhoneNumber());
         log.info("User authenticated: {}", userContext.getMaskedPhoneNumber());
-        
+
         return ResponseEntity.ok(
             new VerificationResponsePayload(true, "Authentication successful")
         );
@@ -59,11 +59,11 @@ public class AuthController {
     @GetMapping("/csrf")
     public ResponseEntity<Map<String, String>> getCsrfToken(
             org.springframework.security.web.csrf.CsrfToken token) {
-        
+
         if (token == null) {
             return ResponseEntity.ok(Map.of("message", "CSRF protection disabled"));
         }
-        
+
         return ResponseEntity.ok(Map.of(
             "token", token.getToken(),
             "headerName", token.getHeaderName(),
@@ -74,16 +74,16 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         sessionService.invalidateSession();
-        
+
         log.info("User logged out successfully");
-        
+
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
     @ExceptionHandler(OtpService.OtpThrottleException.class)
     public ResponseEntity<Map<String, String>> handleThrottleException(
             OtpService.OtpThrottleException ex) {
-        
+
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
             .body(Map.of("error", ex.getMessage()));
     }
@@ -91,9 +91,9 @@ public class AuthController {
     @ExceptionHandler(EmailService.EmailDeliveryException.class)
     public ResponseEntity<Map<String, String>> handleEmailDeliveryException(
             EmailService.EmailDeliveryException ex) {
-        
+
         log.error("Email delivery failed: {}", ex.getMessage());
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(Map.of("error", "Failed to send OTP. Please try again later."));
     }
@@ -101,9 +101,9 @@ public class AuthController {
     @ExceptionHandler(OtpService.OtpVerificationException.class)
     public ResponseEntity<Map<String, String>> handleVerificationException(
             OtpService.OtpVerificationException ex) {
-        
+
         log.warn("OTP verification failed: {}", ex.getMessage());
-        
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(Map.of("error", ex.getMessage()));
     }

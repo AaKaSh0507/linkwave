@@ -28,10 +28,10 @@ spring:
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: ${MAIL_TLS_ENABLED:true}
-            required: true
+            enable: false
+            required: false
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
@@ -113,6 +113,7 @@ linkwave:
     password: ${MAIL_PASSWORD:}
     from: ${MAIL_FROM:no-reply@linkwave.app}
     tls-enabled: ${MAIL_TLS_ENABLED:true}
+    dev-mode: ${LINKWAVE_MAIL_DEV_MODE:true}  # Set to false to send actual emails to Mailhog
 
   redis:
     host: ${REDIS_HOST:localhost}
@@ -127,4 +128,3 @@ linkwave:
     cron: ${RETENTION_CRON:0 0 2 ? * SUN}
     max-retries: ${RETENTION_MAX_RETRIES:3}
     retry-delay-ms: ${RETENTION_RETRY_DELAY_MS:1000}
-

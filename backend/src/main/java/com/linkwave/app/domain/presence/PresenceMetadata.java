@@ -27,22 +27,22 @@ public class PresenceMetadata {
         return connectionCount;
     }
 
-    
+
     public PresenceMetadata incrementConnections() {
         return new PresenceMetadata(userId, Instant.now(), connectionCount + 1);
     }
 
-    
+
     public PresenceMetadata decrementConnections() {
         return new PresenceMetadata(userId, Instant.now(), Math.max(0, connectionCount - 1));
     }
 
-    
+
     public PresenceMetadata updateLastSeen() {
         return new PresenceMetadata(userId, Instant.now(), connectionCount);
     }
 
-    
+
     public boolean hasActiveConnections() {
         return connectionCount > 0;
     }

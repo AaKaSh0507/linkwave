@@ -21,7 +21,7 @@ public class RoomMembershipService {
         this.roomRepository = roomRepository;
     }
 
-    
+
     public boolean isUserInRoom(String userId, String roomId) {
         return roomRepository.findById(roomId)
                 .map(room -> room.getMembers().stream()
@@ -29,7 +29,7 @@ public class RoomMembershipService {
                 .orElse(false);
     }
 
-    
+
     public Set<String> getRoomMembers(String roomId) {
         return roomRepository.findById(roomId)
                 .map(room -> room.getMembers().stream()
@@ -38,7 +38,7 @@ public class RoomMembershipService {
                 .orElse(Set.of());
     }
 
-    
+
     public int getRoomMemberCount(String roomId) {
         return roomRepository.findById(roomId)
                 .map(room -> room.getMembers().size())

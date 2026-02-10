@@ -11,7 +11,7 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  requestOTP: (phoneNumber: string) => Promise<{ otpId: string }>
+  requestOTP: (phoneNumber: string, email: string) => Promise<{ otpId: string }>
   verifyOTP: (otpId: string, otp: string) => Promise<void>
   logout: () => void
 }
@@ -38,13 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const requestOTP = useCallback(async (phoneNumber: string) => {
+  const requestOTP = useCallback(async (phoneNumber: string, email: string) => {
     if (config.features.enableDebugLogging) {
-      console.log('[v0] Requesting OTP for:', phoneNumber)
+      console.log('[v0] Requesting OTP for:', phoneNumber, email)
     }
-    const response = await apiCall<{ otpId: string }>('/auth/request-otp', {
+    const response = await apiCall<{ otpId: string }>('/api/v1/auth/request-otp', {
       method: 'POST',
-      body: JSON.stringify({ phoneNumber }),
+      body: JSON.stringify({ phoneNumber, email }),
     })
     if (config.features.enableDebugLogging) {
       console.log('[v0] OTP requested, ID:', response.otpId)
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (config.features.enableDebugLogging) {
       console.log('[v0] Verifying OTP for ID:', otpId)
     }
-    const response = await apiCall<AuthResponse>('/auth/verify-otp', {
+    const response = await apiCall<AuthResponse>('/api/v1/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify({ otpId, otp }),
     })

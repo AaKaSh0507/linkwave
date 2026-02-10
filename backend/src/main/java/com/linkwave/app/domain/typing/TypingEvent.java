@@ -45,7 +45,7 @@ public class TypingEvent {
         this.timestamp = timestamp;
     }
 
-    
+
 
     public String getType() {
         return type;

@@ -12,7 +12,7 @@ public class ChatMessageEntity {
 
     @Id
     @Column(name = "id", length = 36)
-    private String id; 
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)

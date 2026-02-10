@@ -28,11 +28,11 @@ public class SessionConfig {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(this.redisConfig.getHost());
         config.setPort(this.redisConfig.getPort());
-        
+
         if (this.redisConfig.getPassword() != null && !this.redisConfig.getPassword().isEmpty()) {
             config.setPassword(RedisPassword.of(this.redisConfig.getPassword()));
         }
-        
+
         return new LettuceConnectionFactory(config);
     }
 

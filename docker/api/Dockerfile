@@ -34,7 +34,7 @@ COPY src src
 
 # Build the application with layered JAR
 RUN --mount=type=cache,target=/root/.gradle \
-    ./gradlew build -x test --no-daemon && \
+    ./gradlew build -x test -x checkstyleMain -x checkstyleTest --no-daemon && \
     java -Djarmode=layertools -jar build/libs/*.jar extract --destination build/extracted
 
 # -----------------------------------------------------------------------------

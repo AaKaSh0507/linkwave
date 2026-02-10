@@ -20,12 +20,12 @@ public class MailConfig {
     @Bean
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        
+
         mailSender.setHost(emailConfig.getHost());
         mailSender.setPort(emailConfig.getPort());
         mailSender.setUsername(emailConfig.getUsername());
         mailSender.setPassword(emailConfig.getPassword());
-        
+
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
@@ -35,7 +35,7 @@ public class MailConfig {
         props.put("mail.smtp.timeout", "5000");
         props.put("mail.smtp.writetimeout", "5000");
         props.put("mail.debug", "false");
-        
+
         return mailSender;
     }
 }

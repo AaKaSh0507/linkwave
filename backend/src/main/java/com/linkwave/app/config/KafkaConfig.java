@@ -76,7 +76,7 @@ public class KafkaConfig {
 
         return factory;
     }
-    
+
     @Bean
     public NewTopic chatMessagesTopic() {
         return TopicBuilder.name("chat.messages")
