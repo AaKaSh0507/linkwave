@@ -5,7 +5,7 @@
 
 .PHONY: help dev prod build build-prod up down restart logs logs-api logs-frontend \
         shell-api shell-db shell-redis db-migrate db-seed db-backup db-restore \
-        test clean clean-all status health ps
+        test clean clean-all status health ps k8s-deploy k8s-rollback
 
 # Colors
 CYAN := \033[36m
@@ -16,8 +16,8 @@ RESET := \033[0m
 BOLD := \033[1m
 
 # Configuration
-COMPOSE_DEV := docker compose -f docker-compose.yml
-COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+COMPOSE_DEV := docker compose -f deployments/docker-compose.dev.yml
+COMPOSE_PROD := docker compose -f deployments/docker-compose.prod.yml
 BACKUP_DIR := ./backups
 
 # Default target
@@ -329,7 +329,7 @@ env: ## Copy .env.example to .env
 	@if [ -f .env ]; then \
 		echo "$(YELLOW)⚠️  .env already exists. Skipping...$(RESET)"; \
 	else \
-		cp .env.example .env; \
+		cp config/env/.env.example .env; \
 		echo "$(GREEN)✓ Created .env from .env.example$(RESET)"; \
 		echo "$(YELLOW)Please edit .env with your configuration$(RESET)"; \
 	fi
@@ -337,3 +337,15 @@ env: ## Copy .env.example to .env
 setup: env build pre-commit-install ## Initial setup (create .env, build, and install hooks)
 	@docker volume ls | grep linkwave || echo "  No volumes created yet"
 	@echo ""
+
+# =============================================================================
+# KUBERNETES
+# =============================================================================
+
+k8s-deploy: ## Deploy to Kubernetes cluster
+	@echo "$(CYAN)☸️  Deploying to Kubernetes...$(RESET)"
+	./scripts/k8s-deploy.sh
+
+k8s-rollback: ## Rollback Kubernetes deployments
+	@echo "$(CYAN)⏪ Rolling back Kubernetes deployments...$(RESET)"
+	./scripts/k8s-rollback.sh

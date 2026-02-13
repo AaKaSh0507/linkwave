@@ -164,8 +164,8 @@ echo ""
 echo -e "${BOLD}Configuring custom hooks...${NC}"
 echo ""
 
-if [[ -d "$PROJECT_ROOT/.pre-commit-hooks" ]]; then
-  chmod +x "$PROJECT_ROOT/.pre-commit-hooks/"*.sh 2>/dev/null || true
+if [[ -d "$PROJECT_ROOT/config/hooks" ]]; then
+  chmod +x "$PROJECT_ROOT/config/hooks/"*.sh 2>/dev/null || true
   log_success "Custom hooks made executable"
 fi
 
@@ -178,9 +178,9 @@ echo -e "${BOLD}Setting up secrets detection...${NC}"
 echo ""
 
 if check_command detect-secrets || pip3 show detect-secrets &>/dev/null; then
-  if [[ ! -f "$PROJECT_ROOT/.secrets.baseline" ]]; then
+  if [[ ! -f "$PROJECT_ROOT/config/.secrets.baseline" ]]; then
     log_info "Creating secrets baseline..."
-    detect-secrets scan --exclude-files '\.lock$' --exclude-files 'package-lock\.json$' >"$PROJECT_ROOT/.secrets.baseline" 2>/dev/null || true
+    detect-secrets scan --exclude-files '\.lock$' --exclude-files 'package-lock\.json$' >"$PROJECT_ROOT/config/.secrets.baseline" 2>/dev/null || true
     log_success "Secrets baseline created"
   else
     log_success "Secrets baseline already exists"

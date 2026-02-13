@@ -121,7 +121,7 @@ repos:
       - id: detect-secrets
         name: "🔍 Detect secrets (baseline)"
         args: [
-          "--baseline", ".secrets.baseline",
+          "--baseline", "config/.secrets.baseline",
           "--exclude-files", ".*\\.lock$",
           "--exclude-files", "package-lock\\.json$",
         ]
@@ -311,21 +311,21 @@ repos:
     hooks:
       - id: check-spring-boot-version
         name: "🌱 Check Spring Boot version consistency"
-        entry: .pre-commit-hooks/check-spring-boot-version.sh
+        entry: config/hooks/check-spring-boot-version.sh
         language: script
         files: ^backend/(build\.gradle\.kts|pom\.xml)$
         pass_filenames: false
 
       - id: check-node-version
         name: "📦 Check Node.js version compatibility"
-        entry: .pre-commit-hooks/check-node-version.sh
+        entry: config/hooks/check-node-version.sh
         language: script
         files: ^frontend/(package\.json|\.nvmrc|\.node-version)$
         pass_filenames: false
 
       - id: check-branch-naming
         name: "🌿 Check branch naming convention"
-        entry: .pre-commit-hooks/check-branch-naming.sh
+        entry: config/hooks/check-branch-naming.sh
         language: script
         stages: [pre-commit]
         pass_filenames: false
@@ -333,7 +333,7 @@ repos:
 
       - id: check-no-debug-code
         name: "🐛 Check for debug code"
-        entry: .pre-commit-hooks/check-no-debug-code.sh
+        entry: config/hooks/check-no-debug-code.sh
         language: script
         files: \.(java|ts|tsx|js|jsx)$
         pass_filenames: false
