@@ -255,9 +255,8 @@ repos:
   - repo: https://github.com/hadolint/hadolint
     rev: v2.14.0
     hooks:
-      - id: hadolint-docker
+      - id: hadolint
         name: "🐳 Lint Dockerfiles"
-        entry: hadolint
         args: [
           "--ignore", "DL3008",  # Pin versions in apt-get
           "--ignore", "DL3018",  # Pin versions in apk add
