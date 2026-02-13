@@ -19,7 +19,7 @@ services:
       - ./docker/db/init-scripts:/docker-entrypoint-initdb.d:ro
       - ./backups/postgres:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,7 +46,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,7 +76,7 @@ services:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_logs:/var/lib/zookeeper/log
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      test: [ "CMD", "nc", "-z", "localhost", "2181" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,7 +115,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -165,7 +165,7 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "curl", "-sf", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -200,7 +200,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -237,7 +237,7 @@ services:
     volumes:
       - ./docker/nginx/ssl:/etc/nginx/ssl:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/nginx-health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost/nginx-health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -253,6 +253,76 @@ services:
         reservations:
           cpus: '0.1'
           memory: 64M
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Prometheus Metrics
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: linkwave-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - linkwave-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Grafana Dashboard
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: linkwave-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - linkwave-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     restart: always
 
 # =============================================================================
@@ -274,3 +344,5 @@ volumes:
   zookeeper_data:
   zookeeper_logs:
   kafka_data:
+  prometheus_data:
+  grafana_data:

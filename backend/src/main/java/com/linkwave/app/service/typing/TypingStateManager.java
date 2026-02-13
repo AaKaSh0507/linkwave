@@ -1,5 +1,8 @@
 package com.linkwave.app.service.typing;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,8 +21,18 @@ public class TypingStateManager {
   private static final long RATE_LIMIT_SECONDS = 2;
 
   private final Map<String, Set<TypingState>> roomTypingState = new ConcurrentHashMap<>();
-
   private final Map<String, Instant> lastTypingStart = new ConcurrentHashMap<>();
+  private final Counter typingStartCounter;
+  private final Counter typingStopCounter;
+
+  public TypingStateManager(MeterRegistry meterRegistry) {
+    this.typingStartCounter =
+        Counter.builder("typing.events.total").tag("action", "start").register(meterRegistry);
+    this.typingStopCounter =
+        Counter.builder("typing.events.total").tag("action", "stop").register(meterRegistry);
+    Gauge.builder("typing.users.active", this, mgr -> mgr.getStats().typingUsers)
+        .register(meterRegistry);
+  }
 
   public boolean markTypingStart(String roomId, String userId, String sessionId) {
     String rateLimitKey = userId + ":" + roomId;
@@ -38,6 +51,7 @@ public class TypingStateManager {
         .add(new TypingState(userId, sessionId, now));
 
     log.debug("User {} started typing in room {}", maskUserId(userId), roomId);
+    typingStartCounter.increment();
     return true;
   }
 
@@ -52,6 +66,7 @@ public class TypingStateManager {
       }
 
       log.debug("User {} stopped typing in room {}", maskUserId(userId), roomId);
+      typingStopCounter.increment();
     }
   }
 

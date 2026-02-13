@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { ChatWebSocket } from './websocket'
 import { getAuthToken } from './api'
 import { config } from './config'
+import { logger } from './logger'
 
 export function useWebSocket(onMessage?: (type: string, data: any) => void) {
   const wsRef = useRef<ChatWebSocket | null>(null)
@@ -39,7 +40,7 @@ export function useWebSocket(onMessage?: (type: string, data: any) => void) {
         }
       })
       .catch((error) => {
-        console.error('[v0] WebSocket connection failed:', error)
+        logger.error('WebSocket connection failed', 'websocket', { error: error instanceof Error ? error.message : String(error) })
         setIsConnected(false)
       })
 
@@ -54,7 +55,7 @@ export function useWebSocket(onMessage?: (type: string, data: any) => void) {
     if (wsRef.current?.isOpen()) {
       wsRef.current.send(type, payload)
     } else if (config.features.enableDebugLogging) {
-      console.warn('[v0] WebSocket is not connected')
+      logger.warn('WebSocket is not connected', 'websocket')
     }
   }, [])
 

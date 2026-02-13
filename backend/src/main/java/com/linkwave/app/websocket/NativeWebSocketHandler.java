@@ -15,6 +15,10 @@ import com.linkwave.app.service.readreceipt.ReadReceiptService.ReadReceiptResult
 import com.linkwave.app.service.room.RoomMembershipService;
 import com.linkwave.app.service.typing.TypingStateManager;
 import com.linkwave.app.service.websocket.WsSessionManager;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +43,14 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
   private final ChatService chatService;
   private final WsSessionManager sessionManager;
   private final ObjectMapper objectMapper;
+  private final Counter wsConnectedCounter;
+  private final Counter wsDisconnectedCounter;
+  private final Counter wsInboundCounter;
+  private final Counter wsOutboundCounter;
+  private final Counter wsErrorConnection;
+  private final Counter wsErrorMessage;
+  private final Counter wsErrorAuth;
+  private final Timer wsMessageProcessingTimer;
 
   public NativeWebSocketHandler(
       PresenceService presenceService,
@@ -47,7 +59,8 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
       ReadReceiptService readReceiptService,
       ChatService chatService,
       WsSessionManager sessionManager,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      MeterRegistry meterRegistry) {
     this.presenceService = presenceService;
     this.typingStateManager = typingStateManager;
     this.roomMembershipService = roomMembershipService;
@@ -55,6 +68,36 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
     this.chatService = chatService;
     this.sessionManager = sessionManager;
     this.objectMapper = objectMapper;
+
+    Gauge.builder(
+            "websocket.connections.active", sessionManager, WsSessionManager::getActiveSessionCount)
+        .register(meterRegistry);
+    this.wsConnectedCounter =
+        Counter.builder("websocket.connections.total")
+            .tag("event", "connected")
+            .register(meterRegistry);
+    this.wsDisconnectedCounter =
+        Counter.builder("websocket.connections.total")
+            .tag("event", "disconnected")
+            .register(meterRegistry);
+    this.wsInboundCounter =
+        Counter.builder("websocket.messages.total")
+            .tag("direction", "inbound")
+            .register(meterRegistry);
+    this.wsOutboundCounter =
+        Counter.builder("websocket.messages.total")
+            .tag("direction", "outbound")
+            .register(meterRegistry);
+    this.wsErrorConnection =
+        Counter.builder("websocket.errors.total").tag("type", "connection").register(meterRegistry);
+    this.wsErrorMessage =
+        Counter.builder("websocket.errors.total").tag("type", "message").register(meterRegistry);
+    this.wsErrorAuth =
+        Counter.builder("websocket.errors.total")
+            .tag("type", "authentication")
+            .register(meterRegistry);
+    this.wsMessageProcessingTimer =
+        Timer.builder("websocket.message.processing.duration").register(meterRegistry);
   }
 
   @Override
@@ -63,6 +106,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
     if (phoneNumber == null) {
       log.warn("WebSocket connection without phoneNumber attribute, closing");
+      wsErrorAuth.increment();
       @SuppressWarnings("nullness")
       CloseStatus policyViolation = CloseStatus.POLICY_VIOLATION;
       session.close(policyViolation);
@@ -71,6 +115,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
 
     sessionManager.registerSession(phoneNumber, session);
     presenceService.markOnline(phoneNumber);
+    wsConnectedCounter.increment();
 
     log.info(
         "WebSocket connection established for user: {} (sessionId: {})",
@@ -84,14 +129,17 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
       throws Exception {
     String phoneNumber = (String) session.getAttributes().get("phoneNumber");
     String payload = message.getPayload();
+    wsInboundCounter.increment();
 
     log.debug("Received message from {}: {}", maskPhoneNumber(phoneNumber), payload);
+    Timer.Sample sample = Timer.start();
     try {
       JsonNode jsonNode = objectMapper.readTree(payload);
       String messageType = jsonNode.has("event") ? jsonNode.get("event").asText() : null;
 
       if (messageType == null) {
         log.warn("Message from {} missing 'event' field", maskPhoneNumber(phoneNumber));
+        wsErrorMessage.increment();
         if (session.isOpen()) {
           session.close(CloseStatus.BAD_DATA);
         }
@@ -130,11 +178,14 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
       }
 
     } catch (Exception e) {
+      wsErrorMessage.increment();
       log.error(
           "Failed to parse message from {}: {}", maskPhoneNumber(phoneNumber), e.getMessage());
       if (session.isOpen()) {
         session.close(CloseStatus.BAD_DATA);
       }
+    } finally {
+      sample.stop(wsMessageProcessingTimer);
     }
   }
 
@@ -320,6 +371,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
     if (phoneNumber != null) {
       sessionManager.deregisterSession(session);
       presenceService.markDisconnect(phoneNumber);
+      wsDisconnectedCounter.increment();
       List<String> affectedRooms = typingStateManager.clearUserTyping(phoneNumber, session.getId());
       for (String roomId : affectedRooms) {
         broadcastTypingEvent(roomId, phoneNumber, TypingEvent.TypingAction.STOP);
@@ -336,6 +388,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
   public void handleTransportError(@NonNull WebSocketSession session, @NonNull Throwable exception)
       throws Exception {
     String phoneNumber = (String) session.getAttributes().get("phoneNumber");
+    wsErrorConnection.increment();
     log.error("WebSocket transport error for user: {}", maskPhoneNumber(phoneNumber), exception);
 
     if (session.isOpen()) {
@@ -351,6 +404,7 @@ public class NativeWebSocketHandler extends TextWebSocketHandler {
         @SuppressWarnings("nullness")
         TextMessage textMessage = new TextMessage(message);
         session.sendMessage(textMessage);
+        wsOutboundCounter.increment();
       }
     } catch (IOException e) {
       log.error("Failed to send message to session {}: {}", session.getId(), e.getMessage());

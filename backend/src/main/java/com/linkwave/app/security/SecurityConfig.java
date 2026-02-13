@@ -1,5 +1,7 @@
 package com.linkwave.app.security;
 
+import com.linkwave.app.config.logging.CorrelationIdFilter;
+import com.linkwave.app.config.logging.UserContextFilter;
 import com.linkwave.app.service.session.SessionService;
 import java.util.Arrays;
 import org.springframework.context.annotation.Bean;
@@ -21,9 +23,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
   private final SessionService sessionService;
+  private final CorrelationIdFilter correlationIdFilter;
+  private final UserContextFilter userContextFilter;
 
-  public SecurityConfig(SessionService sessionService) {
+  public SecurityConfig(
+      SessionService sessionService,
+      CorrelationIdFilter correlationIdFilter,
+      UserContextFilter userContextFilter) {
     this.sessionService = sessionService;
+    this.correlationIdFilter = correlationIdFilter;
+    this.userContextFilter = userContextFilter;
   }
 
   @Bean
@@ -34,9 +43,9 @@ public class SecurityConfig {
     CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
 
     http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .addFilterBefore(
-            new SessionAuthenticationFilter(sessionService),
-            UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(new SessionAuthenticationFilter(sessionService), CorrelationIdFilter.class)
+        .addFilterAfter(userContextFilter, SessionAuthenticationFilter.class)
         .csrf(
             csrf ->
                 csrf.csrfTokenRepository(tokenRepository)
@@ -62,7 +71,7 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers("/api/v1/auth/**")
                     .permitAll()
-                    .requestMatchers("/actuator/health")
+                    .requestMatchers("/actuator/health", "/actuator/prometheus")
                     .permitAll()
                     .requestMatchers("/docs", "/docs/**", "/swagger-ui/**", "/v3/api-docs/**")
                     .permitAll()

@@ -1,3 +1,5 @@
+import { logger } from './logger'
+
 export const config = {
   // API Configuration
   api: {
@@ -52,10 +54,9 @@ export function validateConfig() {
   }
 
   if (errors.length > 0) {
-    console.error('[v0] Configuration validation errors:')
-    errors.forEach((error) => console.error(` - ${error}`))
+    logger.error('Configuration validation errors', 'config', { errors })
     if (config.app.isDevelopment) {
-      console.warn('[v0] Continuing with defaults in development mode')
+      logger.warn('Continuing with defaults in development mode', 'config')
     }
   }
 

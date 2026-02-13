@@ -10,6 +10,7 @@ import { ContactSearch } from '@/components/chat/contact-search'
 import { ChatProvider, useChat } from '@/lib/chat-context'
 import { useAuth } from '@/lib/auth-context'
 import { cn } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 import type { User } from '@/lib/types'
 
 function ChatContent() {
@@ -49,7 +50,7 @@ function ChatContent() {
       setCurrentConversation(conversation)
       setShowContactSearch(false)
     } catch (error) {
-      console.error('[v0] Failed to create conversation:', error)
+      logger.error('Failed to create conversation', 'chat', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 

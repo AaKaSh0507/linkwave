@@ -1,0 +1,218 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "websocket_connections_active", "legendFormat": "Active" }],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 50 }, { "color": "red", "value": 100 }] } } }
+    },
+    {
+      "title": "Active Typing Users",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "typing_users_active", "legendFormat": "Typing" }],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }] } } }
+    },
+    {
+      "title": "Active OTPs",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "otp_active_count", "legendFormat": "Active OTPs" }],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "blue", "value": null }] } } }
+    },
+    {
+      "title": "JVM Memory Used",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "Heap" }],
+      "fieldConfig": { "defaults": { "unit": "bytes", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 536870912 }] } } }
+    },
+    {
+      "title": "WebSocket Connection Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "rate(websocket_connections_total{event=\"connected\"}[5m])", "legendFormat": "Connected/s" },
+        { "expr": "rate(websocket_connections_total{event=\"disconnected\"}[5m])", "legendFormat": "Disconnected/s" }
+      ]
+    },
+    {
+      "title": "WebSocket Message Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "rate(websocket_messages_total{direction=\"inbound\"}[5m])", "legendFormat": "Inbound/s" },
+        { "expr": "rate(websocket_messages_total{direction=\"outbound\"}[5m])", "legendFormat": "Outbound/s" }
+      ]
+    },
+    {
+      "title": "WebSocket Errors",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "rate(websocket_errors_total{type=\"connection\"}[5m])", "legendFormat": "Connection" },
+        { "expr": "rate(websocket_errors_total{type=\"message\"}[5m])", "legendFormat": "Message" },
+        { "expr": "rate(websocket_errors_total{type=\"authentication\"}[5m])", "legendFormat": "Auth" }
+      ]
+    },
+    {
+      "title": "WS Message Processing Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(websocket_message_processing_duration_seconds_bucket[5m]))", "legendFormat": "p95" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Chat Messages Sent Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "rate(messages_sent_total{status=\"success\"}[5m])", "legendFormat": "Success/s" },
+        { "expr": "rate(messages_sent_total{status=\"failure\"}[5m])", "legendFormat": "Failure/s" }
+      ]
+    },
+    {
+      "title": "Message Size Distribution",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "messages_size_bytes_mean", "legendFormat": "Mean" },
+        { "expr": "messages_size_bytes_max", "legendFormat": "Max" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "Kafka Produced / Consumed Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "targets": [
+        { "expr": "rate(kafka_messages_produced_total[5m])", "legendFormat": "Produced/s" },
+        { "expr": "rate(kafka_messages_consumed_total[5m])", "legendFormat": "Consumed/s" }
+      ]
+    },
+    {
+      "title": "Kafka Consumer Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(kafka_consume_duration_seconds_bucket[5m]))", "legendFormat": "p95" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "OTP Request Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "targets": [
+        { "expr": "rate(otp_requests_total{status=\"success\"}[5m])", "legendFormat": "Success/s" },
+        { "expr": "rate(otp_requests_total{status=\"failure\"}[5m])", "legendFormat": "Failure/s" }
+      ]
+    },
+    {
+      "title": "OTP Verification Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "targets": [
+        { "expr": "rate(otp_verifications_total{result=\"success\"}[5m])", "legendFormat": "Success/s" },
+        { "expr": "rate(otp_verifications_total{result=\"failure\"}[5m])", "legendFormat": "Failure/s" },
+        { "expr": "rate(otp_verifications_total{result=\"expired\"}[5m])", "legendFormat": "Expired/s" }
+      ]
+    },
+    {
+      "title": "Presence Updates",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "targets": [
+        { "expr": "rate(presence_updates_total{status=\"online\"}[5m])", "legendFormat": "Online/s" },
+        { "expr": "rate(presence_updates_total{status=\"offline\"}[5m])", "legendFormat": "Offline/s" }
+      ]
+    },
+    {
+      "title": "Typing Events",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "targets": [
+        { "expr": "rate(typing_events_total{action=\"start\"}[5m])", "legendFormat": "Start/s" },
+        { "expr": "rate(typing_events_total{action=\"stop\"}[5m])", "legendFormat": "Stop/s" }
+      ]
+    },
+    {
+      "title": "Retention Job Executions",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+      "targets": [
+        { "expr": "increase(retention_job_executions_total{status=\"success\"}[1h])", "legendFormat": "Success" },
+        { "expr": "increase(retention_job_executions_total{status=\"failure\"}[1h])", "legendFormat": "Failure" }
+      ]
+    },
+    {
+      "title": "Messages Deleted by Retention",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+      "targets": [{ "expr": "increase(retention_messages_deleted_total[1h])", "legendFormat": "Deleted" }]
+    },
+    {
+      "title": "Message Persistence Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 60 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(messages_persistence_duration_seconds_bucket[5m]))", "legendFormat": "p95" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Presence Heartbeat Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 60 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(presence_heartbeat_duration_seconds_bucket[5m]))", "legendFormat": "p95" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 68 },
+      "targets": [{ "expr": "rate(http_server_requests_seconds_count[5m])", "legendFormat": "{{method}} {{uri}} {{status}}" }]
+    },
+    {
+      "title": "HTTP Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 68 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))", "legendFormat": "{{method}} {{uri}}" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": ["linkwave", "application"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Linkwave Application Metrics",
+  "uid": "linkwave-app",
+  "version": 1
+}

@@ -3,6 +3,9 @@ package com.linkwave.app.service.presence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkwave.app.domain.presence.PresenceMetadata;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -24,12 +27,24 @@ public class PresenceService {
 
   private final RedisTemplate<String, String> redisTemplate;
   private final ObjectMapper objectMapper;
+  private final Counter presenceOnlineCounter;
+  private final Counter presenceOfflineCounter;
+  private final Timer presenceHeartbeatTimer;
 
   private final Map<String, Long> lastHeartbeatTime = new HashMap<>();
 
-  public PresenceService(RedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper) {
+  public PresenceService(
+      RedisTemplate<String, String> redisTemplate,
+      ObjectMapper objectMapper,
+      MeterRegistry meterRegistry) {
     this.redisTemplate = redisTemplate;
     this.objectMapper = objectMapper;
+    this.presenceOnlineCounter =
+        Counter.builder("presence.updates.total").tag("status", "online").register(meterRegistry);
+    this.presenceOfflineCounter =
+        Counter.builder("presence.updates.total").tag("status", "offline").register(meterRegistry);
+    this.presenceHeartbeatTimer =
+        Timer.builder("presence.heartbeat.duration").register(meterRegistry);
   }
 
   public void markOnline(String userId) {
@@ -53,6 +68,7 @@ public class PresenceService {
       }
 
       setPresenceMetadata(key, updated);
+      presenceOnlineCounter.increment();
 
     } catch (Exception e) {
       log.error("Failed to mark user {} as online: {}", maskUserId(userId), e.getMessage());
@@ -79,6 +95,7 @@ public class PresenceService {
             maskUserId(userId),
             updated.getConnectionCount());
       } else {
+        presenceOfflineCounter.increment();
         log.info(
             "User {} disconnected (last connection, will expire in {}s)",
             maskUserId(userId),
@@ -91,42 +108,46 @@ public class PresenceService {
   }
 
   public boolean recordHeartbeat(String userId) {
-
-    Long lastHeartbeat = lastHeartbeatTime.get(userId);
-    long now = System.currentTimeMillis();
-
-    if (lastHeartbeat != null && (now - lastHeartbeat) < HEARTBEAT_MIN_INTERVAL_MS) {
-      log.debug("Heartbeat rate-limited for user {}", maskUserId(userId));
-      return false;
-    }
-
-    String key = getPresenceKey(userId);
-
+    Timer.Sample sample = Timer.start();
     try {
-      PresenceMetadata current = getPresenceMetadata(userId);
+      Long lastHeartbeat = lastHeartbeatTime.get(userId);
+      long now = System.currentTimeMillis();
 
-      if (current == null) {
-        log.warn(
-            "Heartbeat received for user {} with no presence record, marking online",
-            maskUserId(userId));
-        markOnline(userId);
-        return true;
+      if (lastHeartbeat != null && (now - lastHeartbeat) < HEARTBEAT_MIN_INTERVAL_MS) {
+        log.debug("Heartbeat rate-limited for user {}", maskUserId(userId));
+        return false;
       }
 
-      PresenceMetadata updated = current.updateLastSeen();
-      setPresenceMetadata(key, updated);
+      String key = getPresenceKey(userId);
 
-      lastHeartbeatTime.put(userId, now);
-      log.debug(
-          "Heartbeat recorded for user {} (connections: {})",
-          maskUserId(userId),
-          updated.getConnectionCount());
+      try {
+        PresenceMetadata current = getPresenceMetadata(userId);
 
-      return true;
+        if (current == null) {
+          log.warn(
+              "Heartbeat received for user {} with no presence record, marking online",
+              maskUserId(userId));
+          markOnline(userId);
+          return true;
+        }
 
-    } catch (Exception e) {
-      log.error("Failed to record heartbeat for user {}: {}", maskUserId(userId), e.getMessage());
-      return false;
+        PresenceMetadata updated = current.updateLastSeen();
+        setPresenceMetadata(key, updated);
+
+        lastHeartbeatTime.put(userId, now);
+        log.debug(
+            "Heartbeat recorded for user {} (connections: {})",
+            maskUserId(userId),
+            updated.getConnectionCount());
+
+        return true;
+
+      } catch (Exception e) {
+        log.error("Failed to record heartbeat for user {}: {}", maskUserId(userId), e.getMessage());
+        return false;
+      }
+    } finally {
+      sample.stop(presenceHeartbeatTimer);
     }
   }
 

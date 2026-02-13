@@ -1,4 +1,5 @@
 import { config } from './config'
+import { logger } from './logger'
 
 export interface ApiResponse<T> {
   success: boolean
@@ -40,7 +41,7 @@ export async function apiCall<T>(
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       if (config.features.enableDebugLogging) {
-        console.error('[v0] API Error:', { status: response.status, data: errorData })
+        logger.error('API request failed', 'api', { status: response.status, data: errorData })
       }
       throw new Error(errorData.message || `API Error: ${response.status} ${response.statusText}`)
     }
@@ -50,7 +51,7 @@ export async function apiCall<T>(
     return data
   } catch (error) {
     if (config.features.enableDebugLogging) {
-      console.error('[v0] API Exception:', error)
+      logger.error('API exception', 'api', { error: error instanceof Error ? error.message : String(error) })
     }
     throw error
   }

@@ -1,5 +1,6 @@
 import type { Message, TypingIndicator, PresenceUpdate, ReadReceipt } from './types'
 import { config, getWebSocketUrl } from './config'
+import { logger } from './logger'
 
 type EventHandler<T> = (data: T) => void
 
@@ -40,7 +41,7 @@ export class ChatWebSocket {
         }
 
         this.ws.onerror = (error) => {
-          console.error('[v0] WebSocket error:', error)
+          logger.error('WebSocket error', 'websocket', { error: String(error) })
           reject(error)
         }
 
@@ -68,7 +69,7 @@ export class ChatWebSocket {
         handlers.forEach((handler) => handler(payload))
       }
     } catch (error) {
-      console.error('[v0] Failed to parse WebSocket message:', error)
+      logger.error('Failed to parse WebSocket message', 'websocket', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -85,9 +86,9 @@ export class ChatWebSocket {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
 
-      setTimeout(() => this.connect().catch(console.error), this.reconnectDelay)
+      setTimeout(() => this.connect().catch((err) => logger.error('Reconnect failed', 'websocket', { error: String(err) })), this.reconnectDelay)
     } else {
-      console.error('[v0] Max reconnection attempts reached')
+      logger.error('Max reconnection attempts reached', 'websocket', { attempts: this.maxReconnectAttempts })
     }
   }
 

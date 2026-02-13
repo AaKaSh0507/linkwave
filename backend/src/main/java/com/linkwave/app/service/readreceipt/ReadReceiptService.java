@@ -11,11 +11,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReadReceiptService {
+
+  private static final Logger log = LoggerFactory.getLogger(ReadReceiptService.class);
 
   private final ReadReceiptRepository repository;
   private final RoomMembershipService roomMembershipService;
@@ -130,6 +134,11 @@ public class ReadReceiptService {
     }
 
     repository.saveAll(newReceipts);
+    log.info(
+        "Read receipts created: room_id={} reader={} count={}",
+        roomId,
+        maskPhone(readerPhoneNumber),
+        newReceipts.size());
 
     return newReceipts.stream().map(ReadReceiptResult::newRead).collect(Collectors.toList());
   }
@@ -142,5 +151,12 @@ public class ReadReceiptService {
 
   public long getReadCount(String messageId) {
     return repository.countByMessageId(messageId);
+  }
+
+  private String maskPhone(String phone) {
+    if (phone == null || phone.length() < 4) {
+      return "***";
+    }
+    return "***" + phone.substring(phone.length() - 4);
   }
 }

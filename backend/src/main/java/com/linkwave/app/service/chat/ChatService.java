@@ -4,6 +4,10 @@ import com.linkwave.app.domain.chat.*;
 import com.linkwave.app.repository.ChatMemberRepository;
 import com.linkwave.app.repository.ChatMessageRepository;
 import com.linkwave.app.repository.ChatRoomRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,16 +28,35 @@ public class ChatService {
   private final ChatMemberRepository memberRepository;
   private final ChatMessageRepository messageRepository;
   private final KafkaTemplate<String, ChatMessage> kafkaTemplate;
+  private final Counter messagesSentSuccess;
+  private final Counter messagesSentFailure;
+  private final Counter kafkaProducedTotal;
+  private final Timer messagePersistenceTimer;
+  private final DistributionSummary messageSizeSummary;
 
   public ChatService(
       ChatRoomRepository roomRepository,
       ChatMemberRepository memberRepository,
       ChatMessageRepository messageRepository,
-      KafkaTemplate<String, ChatMessage> kafkaTemplate) {
+      KafkaTemplate<String, ChatMessage> kafkaTemplate,
+      MeterRegistry meterRegistry) {
     this.roomRepository = roomRepository;
     this.memberRepository = memberRepository;
     this.messageRepository = messageRepository;
     this.kafkaTemplate = kafkaTemplate;
+
+    this.messagesSentSuccess =
+        Counter.builder("messages.sent.total").tag("status", "success").register(meterRegistry);
+    this.messagesSentFailure =
+        Counter.builder("messages.sent.total").tag("status", "failure").register(meterRegistry);
+    this.kafkaProducedTotal =
+        Counter.builder("kafka.messages.produced.total")
+            .tag("topic", "chat.messages")
+            .register(meterRegistry);
+    this.messagePersistenceTimer =
+        Timer.builder("messages.persistence.duration").register(meterRegistry);
+    this.messageSizeSummary =
+        DistributionSummary.builder("messages.size.bytes").register(meterRegistry);
   }
 
   @Transactional
@@ -76,18 +99,28 @@ public class ChatService {
   }
 
   public ChatMessage sendMessage(String roomId, String senderPhoneNumber, String body) {
-    ChatRoomEntity room =
-        roomRepository
-            .findById(roomId)
-            .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
-    if (!memberRepository.existsByRoomAndPhoneNumber(room, senderPhoneNumber)) {
-      throw new SecurityException("User is not a member of this room");
-    }
-    ChatMessage message = ChatMessage.create(roomId, senderPhoneNumber, body);
-    kafkaTemplate.send("chat.messages", roomId, message);
-    log.info("Published message {} to room {}", message.getMessageId(), roomId);
+    try {
+      ChatRoomEntity room =
+          roomRepository
+              .findById(roomId)
+              .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
+      if (!memberRepository.existsByRoomAndPhoneNumber(room, senderPhoneNumber)) {
+        throw new SecurityException("User is not a member of this room");
+      }
+      ChatMessage message = ChatMessage.create(roomId, senderPhoneNumber, body);
+      if (body != null) {
+        messageSizeSummary.record(body.getBytes().length);
+      }
+      kafkaTemplate.send("chat.messages", roomId, message);
+      kafkaProducedTotal.increment();
+      messagesSentSuccess.increment();
+      log.info("Published message {} to room {}", message.getMessageId(), roomId);
 
-    return message;
+      return message;
+    } catch (Exception e) {
+      messagesSentFailure.increment();
+      throw e;
+    }
   }
 
   @Transactional(readOnly = true)
@@ -107,23 +140,26 @@ public class ChatService {
 
   @Transactional
   public void persistMessage(ChatMessage message) {
-    ChatRoomEntity room =
-        roomRepository
-            .findById(message.getRoomId())
-            .orElseThrow(
-                () -> new IllegalArgumentException("Room not found: " + message.getRoomId()));
+    messagePersistenceTimer.record(
+        () -> {
+          ChatRoomEntity room =
+              roomRepository
+                  .findById(message.getRoomId())
+                  .orElseThrow(
+                      () -> new IllegalArgumentException("Room not found: " + message.getRoomId()));
 
-    ChatMessageEntity entity = new ChatMessageEntity();
-    entity.setId(message.getMessageId());
-    entity.setRoom(room);
-    entity.setSenderPhone(message.getSenderPhoneNumber());
-    entity.setBody(message.getBody());
-    entity.setSentAt(Instant.ofEpochMilli(message.getSentAt()));
-    entity.setTtlDays(message.getTtlDays());
+          ChatMessageEntity entity = new ChatMessageEntity();
+          entity.setId(message.getMessageId());
+          entity.setRoom(room);
+          entity.setSenderPhone(message.getSenderPhoneNumber());
+          entity.setBody(message.getBody());
+          entity.setSentAt(Instant.ofEpochMilli(message.getSentAt()));
+          entity.setTtlDays(message.getTtlDays());
 
-    messageRepository.save(entity);
+          messageRepository.save(entity);
 
-    log.debug("Persisted message {} to database", message.getMessageId());
+          log.debug("Persisted message {} to database", message.getMessageId());
+        });
   }
 
   @Transactional(readOnly = true)

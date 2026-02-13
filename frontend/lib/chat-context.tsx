@@ -6,6 +6,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { apiCall } from './api'
 import { useWebSocket } from './use-websocket'
 import { config } from './config'
+import { logger } from './logger'
 import type { Message, Conversation, User, TypingIndicator, PresenceUpdate } from './types'
 
 interface ChatContextType {
@@ -112,7 +113,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           break
 
         default:
-          console.warn('[v0] Unknown WebSocket message type:', type)
+          logger.warn('Unknown WebSocket message type', 'chat', { type })
       }
     },
     [currentConversation?.id, addMessage, updateUserPresence]
@@ -126,7 +127,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const data = await apiCall<Conversation[]>('/conversations')
       setConversations(data)
     } catch (error) {
-      console.error('[v0] Failed to fetch conversations:', error)
+      logger.error('Failed to fetch conversations', 'chat', { error: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsLoading(false)
     }
@@ -141,7 +142,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         )
         setMessages(data)
       } catch (error) {
-        console.error('[v0] Failed to fetch messages:', error)
+        logger.error('Failed to fetch messages', 'chat', { error: error instanceof Error ? error.message : String(error) })
       } finally {
         setIsLoading(false)
       }
@@ -160,7 +161,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
         addMessage(response)
       } catch (error) {
-        console.error('[v0] Failed to send message:', error)
+        logger.error('Failed to send message', 'chat', { error: error instanceof Error ? error.message : String(error) })
       }
     },
     [currentConversation, addMessage]
@@ -175,7 +176,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setConversations((prev) => [response, ...prev])
       return response
     } catch (error) {
-      console.error('[v0] Failed to create conversation:', error)
+      logger.error('Failed to create conversation', 'chat', { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }, [])

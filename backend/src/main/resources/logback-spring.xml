@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="linkwave"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       DEV PROFILE — colored, human-readable console output
+       ═══════════════════════════════════════════════════════════ -->
+  <springProfile name="default | local | dev">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [%X{correlation_id:-}] [%X{user_id:-}] — %msg%n</pattern>
+      </encoder>
+    </appender>
+
+    <logger name="com.linkwave.app" level="DEBUG"/>
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PROD PROFILE — structured JSON via Logstash encoder
+       ═══════════════════════════════════════════════════════════ -->
+  <springProfile name="prod | production">
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>correlation_id</includeMdcKeyName>
+        <includeMdcKeyName>user_id</includeMdcKeyName>
+        <includeMdcKeyName>session_id</includeMdcKeyName>
+        <customFields>{"app":"${APP_NAME}","env":"production"}</customFields>
+        <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</timestampPattern>
+        <timeZone>UTC</timeZone>
+      </encoder>
+    </appender>
+
+    <logger name="com.linkwave.app" level="INFO"/>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
+    <root level="WARN">
+      <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+  </springProfile>
+
+</configuration>
