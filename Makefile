@@ -214,10 +214,11 @@ db-reset: ## Reset database (WARNING: destroys data)
 # TESTING
 # =============================================================================
 
-test: ## Run tests in containers
-	@echo "$(CYAN)🧪 Running tests...$(RESET)"
-	cd backend && ./gradlew test
-	@echo "$(GREEN)✓ Tests complete!$(RESET)"
+test: ## Run all available tests at once
+	@echo "$(CYAN)🧪 Running all tests...$(RESET)"
+	cd backend && ./gradlew clean test
+	cd frontend && npm run test --if-present
+	@echo "$(GREEN)✓ All tests complete!$(RESET)"
 
 test-api: ## Run API tests
 	@echo "$(CYAN)🧪 Running API tests...$(RESET)"
@@ -225,7 +226,7 @@ test-api: ## Run API tests
 
 test-frontend: ## Run frontend tests
 	@echo "$(CYAN)🧪 Running frontend tests...$(RESET)"
-	cd frontend && npm test
+	cd frontend && npm run test --if-present
 
 lint: ## Run linters
 	@echo "$(CYAN)🔍 Running linters...$(RESET)"

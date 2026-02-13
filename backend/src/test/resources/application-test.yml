@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16:///testdb
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+
+mail:
+  enabled: false
+
+linkwave:
+  mail:
+    dev-mode: true
+  redis:
+    host: localhost
+    port: 6379
+  retention:
+    days: 1
+
+logging:
+  level:
+    com.linkwave.app: DEBUG
