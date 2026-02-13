@@ -19,6 +19,7 @@
 *.keystore
 secrets/
 credentials/
+k8s/base/secrets.yaml
 
 # =============================================================================
 # OPERATING SYSTEM

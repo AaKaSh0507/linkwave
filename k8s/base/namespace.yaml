@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: linkwave
+  labels:
+    app: linkwave
+    environment: production

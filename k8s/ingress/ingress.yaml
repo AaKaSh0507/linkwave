@@ -1,0 +1,99 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkwave-ingress
+  namespace: linkwave
+  labels:
+    app: linkwave
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.options: linkwave-linkwave-tls-options@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: linkwave-hsts-headers@kubernetescrd,linkwave-websocket-headers@kubernetescrd
+spec:
+  tls:
+    - hosts:
+        - linkwave.example.com
+      secretName: linkwave-tls-cert  # pragma: allowlist secret
+  rules:
+    - host: linkwave.example.com
+      http:
+        paths:
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /actuator
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /v3/api-docs
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-frontend
+                port:
+                  number: 3000
+---
+# HTTP to HTTPS redirect ingress (separate entrypoint)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkwave-ingress-redirect
+  namespace: linkwave
+  labels:
+    app: linkwave
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: linkwave-https-redirect@kubernetescrd
+spec:
+  rules:
+    - host: linkwave.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkwave-frontend
+                port:
+                  number: 3000

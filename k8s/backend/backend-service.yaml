@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkwave-backend
+  namespace: linkwave
+  labels:
+    app: linkwave
+    component: backend
+    tier: application
+spec:
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+  selector:
+    app: linkwave-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
