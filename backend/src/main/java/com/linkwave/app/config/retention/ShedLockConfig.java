@@ -13,9 +13,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableSchedulerLock(defaultLockAtMostFor = "PT2H")
 public class ShedLockConfig {
 
-    @Bean
-    public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
-        return new RedisLockProvider(connectionFactory, "linkwave", "retention-lock:");
-    }
+  @Bean
+  public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
+    return new RedisLockProvider(connectionFactory, "linkwave", "retention-lock:");
+  }
 }
-

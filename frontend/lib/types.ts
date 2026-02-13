@@ -70,4 +70,3 @@ export interface MessageHistoryState {
   isInitialLoadComplete: boolean
   error: string | null
 }
-

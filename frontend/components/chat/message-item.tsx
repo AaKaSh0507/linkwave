@@ -80,4 +80,3 @@ function arePropsEqual(prevProps: MessageItemProps, nextProps: MessageItemProps)
 }
 
 export const MessageItem = memo(MessageItemComponent, arePropsEqual)
-

@@ -23,9 +23,7 @@ export async function apiCall<T>(
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  if (config.features.enableDebugLogging) {
-    console.log('[v0] API Call:', { url, method: options.method || 'GET' })
-  }
+
 
   try {
     const controller = new AbortController()
@@ -48,9 +46,7 @@ export async function apiCall<T>(
     }
 
     const data = await response.json()
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] API Response:', data)
-    }
+
     return data
   } catch (error) {
     if (config.features.enableDebugLogging) {

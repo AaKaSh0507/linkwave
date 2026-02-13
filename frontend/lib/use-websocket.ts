@@ -19,22 +19,20 @@ export function useWebSocket(onMessage?: (type: string, data: any) => void) {
     ws.connect()
       .then(() => {
         setIsConnected(true)
-        if (config.features.enableDebugLogging) {
-          console.log('[v0] WebSocket connected successfully')
-        }
+
 
         // Register event listeners based on feature flags
         if (onMessage) {
           ws.on('MESSAGE', (data) => onMessage('MESSAGE', data))
-          
+
           if (config.features.enableTypingIndicators) {
             ws.on('TYPING', (data) => onMessage('TYPING', data))
           }
-          
+
           if (config.features.enablePresenceIndicators) {
             ws.on('PRESENCE', (data) => onMessage('PRESENCE', data))
           }
-          
+
           if (config.features.enableReadReceipts) {
             ws.on('READ_RECEIPT', (data) => onMessage('READ_RECEIPT', data))
           }

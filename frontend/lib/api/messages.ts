@@ -68,5 +68,3 @@ export function isValidTimestamp(timestamp: string): boolean {
   const date = new Date(timestamp)
   return !isNaN(date.getTime())
 }
-
-

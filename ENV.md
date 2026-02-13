@@ -9,6 +9,7 @@ This document provides comprehensive documentation for all environment variables
 ## Database (PostgreSQL)
 
 ### `POSTGRES_DB`
+
 - **Description**: PostgreSQL database name
 - **Required**: Yes
 - **Default**: `linkwave`
@@ -16,6 +17,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `POSTGRES_USER`
+
 - **Description**: PostgreSQL database user
 - **Required**: Yes
 - **Default**: `linkwave`
@@ -23,6 +25,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `POSTGRES_PASSWORD`
+
 - **Description**: PostgreSQL database password
 - **Required**: Yes
 - **Default**: None (must be set)
@@ -31,6 +34,7 @@ This document provides comprehensive documentation for all environment variables
 - **Security**: ⚠️ **SENSITIVE** - Never commit to Git
 
 ### `POSTGRES_PORT`
+
 - **Description**: PostgreSQL port for external access
 - **Required**: No
 - **Default**: `5432` (dev: `5433`)
@@ -38,13 +42,15 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Dev, Local
 
 ### `DATABASE_URL`
+
 - **Description**: Full JDBC connection URL for Spring Boot
-- **Required**: Yes (via environment) 
+- **Required**: Yes (via environment)
 - **Default**: `jdbc:postgresql://localhost:5432/linkwave`
 - **Example**: `jdbc:postgresql://postgres:5432/linkwave_production`
 - **Environment**: All
 
 ### `DATABASE_USERNAME`
+
 - **Description**: Application database username (same as POSTGRES_USER)
 - **Required**: Yes
 - **Default**: `linkwave`
@@ -52,6 +58,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `DATABASE_PASSWORD`
+
 - **Description**: Application database password (same as POSTGRES_PASSWORD)
 - **Required**: Yes
 - **Default**: None
@@ -64,6 +71,7 @@ This document provides comprehensive documentation for all environment variables
 ## Redis Cache
 
 ### `REDIS_HOST`
+
 - **Description**: Redis server hostname
 - **Required**: Yes
 - **Default**: `localhost`
@@ -71,6 +79,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `REDIS_PORT`
+
 - **Description**: Redis server port
 - **Required**: No
 - **Default**: `6379` (dev: `6380`)
@@ -78,6 +87,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `REDIS_PASSWORD`
+
 - **Description**: Redis authentication password
 - **Required**: Yes (production)
 - **Default**: Empty (dev only)
@@ -90,6 +100,7 @@ This document provides comprehensive documentation for all environment variables
 ## Kafka Message Broker
 
 ### `KAFKA_BOOTSTRAP_SERVERS`
+
 - **Description**: Kafka broker addresses (comma-separated)
 - **Required**: Yes
 - **Default**: `localhost:9092`
@@ -97,6 +108,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `KAFKA_CONSUMER_GROUP_ID`
+
 - **Description**: Kafka consumer group identifier
 - **Required**: No
 - **Default**: `linkwave-chat-delivery`
@@ -108,6 +120,7 @@ This document provides comprehensive documentation for all environment variables
 ## Email / SMTP
 
 ### `MAIL_HOST`
+
 - **Description**: SMTP server hostname
 - **Required**: Yes (production)
 - **Default**: Empty (dev: `localhost` for Mailhog)
@@ -115,6 +128,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Production
 
 ### `MAIL_PORT`
+
 - **Description**: SMTP server port
 - **Required**: No
 - **Default**: `587` (TLS), `1025` (dev: Mailhog)
@@ -122,6 +136,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `MAIL_USERNAME`
+
 - **Description**: SMTP authentication username
 - **Required**: Yes (if SMTP auth required)
 - **Default**: Empty
@@ -130,6 +145,7 @@ This document provides comprehensive documentation for all environment variables
 - **Security**: ⚠️ **SENSITIVE**
 
 ### `MAIL_PASSWORD`
+
 - **Description**: SMTP authentication password
 - **Required**: Yes (if SMTP auth required)
 - **Default**: Empty
@@ -138,6 +154,7 @@ This document provides comprehensive documentation for all environment variables
 - **Security**: ⚠️ **SENSITIVE** - Never commit to Git
 
 ### `MAIL_FROM`
+
 - **Description**: Default "From" email address
 - **Required**: No
 - **Default**: `no-reply@linkwave.app`
@@ -145,6 +162,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `MAIL_TLS_ENABLED`
+
 - **Description**: Enable STARTTLS for SMTP
 - **Required**: No
 - **Default**: `true` (prod), `false` (dev)
@@ -156,6 +174,7 @@ This document provides comprehensive documentation for all environment variables
 ## Application Server
 
 ### `SERVER_PORT`
+
 - **Description**: Spring Boot application port
 - **Required**: No
 - **Default**: `8080`
@@ -163,6 +182,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `API_PORT`
+
 - **Description**: External API port mapping (Docker)
 - **Required**: No
 - **Default**: `8080`
@@ -170,6 +190,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Dev, Local
 
 ### `SPRING_PROFILES_ACTIVE`
+
 - **Description**: Active Spring profile
 - **Required**: No
 - **Default**: `local`
@@ -182,6 +203,7 @@ This document provides comprehensive documentation for all environment variables
 ## Frontend
 
 ### `FRONTEND_PORT`
+
 - **Description**: Next.js frontend port (Docker)
 - **Required**: No
 - **Default**: `3000`
@@ -189,6 +211,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Dev, Local
 
 ### `PUBLIC_API_URL`
+
 - **Description**: Public-facing API URL (for Docker build args)
 - **Required**: Yes (production)
 - **Default**: `http://localhost:8080`
@@ -196,6 +219,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Production
 
 ### `PUBLIC_WS_URL`
+
 - **Description**: Public-facing WebSocket URL (for Docker build args)
 - **Required**: Yes (production)
 - **Default**: `ws://localhost:8080/ws`
@@ -203,6 +227,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Production
 
 ### `NEXT_PUBLIC_API_URL`
+
 - **Description**: API URL for frontend (runtime)
 - **Required**: Yes
 - **Default**: `http://localhost:8080/api/v1`
@@ -211,6 +236,7 @@ This document provides comprehensive documentation for all environment variables
 - **Note**: Must include `/api/v1` path
 
 ### `NEXT_PUBLIC_WS_URL`
+
 - **Description**: WebSocket URL for frontend (runtime)
 - **Required**: Yes
 - **Default**: `localhost:8080`
@@ -219,6 +245,7 @@ This document provides comprehensive documentation for all environment variables
 - **Note**: Do not include `ws://` or `wss://` prefix
 
 ### `NEXT_PUBLIC_API_TIMEOUT`
+
 - **Description**: API request timeout in milliseconds
 - **Required**: No
 - **Default**: `30000` (30 seconds)
@@ -226,6 +253,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_WS_RECONNECT_DELAY`
+
 - **Description**: WebSocket reconnection delay in milliseconds
 - **Required**: No
 - **Default**: `3000`
@@ -233,6 +261,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_WS_MAX_RECONNECT`
+
 - **Description**: Maximum WebSocket reconnection attempts
 - **Required**: No
 - **Default**: `5`
@@ -244,6 +273,7 @@ This document provides comprehensive documentation for all environment variables
 ## Session & Security
 
 ### `SESSION_TIMEOUT`
+
 - **Description**: Session timeout duration
 - **Required**: No
 - **Default**: `30m` (dev), `60m` (prod)
@@ -252,6 +282,7 @@ This document provides comprehensive documentation for all environment variables
 - **Format**: Duration (s, m, h)
 
 ### `SESSION_NAMESPACE`
+
 - **Description**: Redis key prefix for sessions
 - **Required**: No
 - **Default**: `linkwave:session:`
@@ -259,6 +290,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `SESSION_TIMEOUT_MINUTES`
+
 - **Description**: Session timeout in minutes (legacy)
 - **Required**: No
 - **Default**: `30`
@@ -266,6 +298,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `COOKIE_SECURE`
+
 - **Description**: Enable secure flag on cookies (HTTPS only)
 - **Required**: No
 - **Default**: `false` (dev), `true` (prod)
@@ -274,6 +307,7 @@ This document provides comprehensive documentation for all environment variables
 - **Production**: ⚠️ **Must be `true`** for HTTPS
 
 ### `COOKIE_SAME_SITE`
+
 - **Description**: SameSite cookie attribute
 - **Required**: No
 - **Default**: `lax` (dev), `strict` (prod)
@@ -282,6 +316,7 @@ This document provides comprehensive documentation for all environment variables
 - **Valid Values**: `strict`, `lax`, `none`
 
 ### `COOKIE_DOMAIN`
+
 - **Description**: Cookie domain scope
 - **Required**: No
 - **Default**: Empty (current domain)
@@ -293,6 +328,7 @@ This document provides comprehensive documentation for all environment variables
 ## OTP (One-Time Password)
 
 ### `OTP_LENGTH`
+
 - **Description**: Length of generated OTP codes
 - **Required**: No
 - **Default**: `6`
@@ -300,6 +336,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `OTP_TTL_SECONDS`
+
 - **Description**: OTP validity period in seconds
 - **Required**: No
 - **Default**: `300` (5 minutes)
@@ -307,6 +344,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `OTP_THROTTLE_MAX_REQUESTS`
+
 - **Description**: Maximum OTP requests within throttle window
 - **Required**: No
 - **Default**: `3`
@@ -314,6 +352,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `OTP_THROTTLE_WINDOW_SECONDS`
+
 - **Description**: Throttle window duration in seconds
 - **Required**: No
 - **Default**: `600` (10 minutes)
@@ -325,6 +364,7 @@ This document provides comprehensive documentation for all environment variables
 ## Data Retention
 
 ### `RETENTION_DAYS`
+
 - **Description**: Message retention period in days
 - **Required**: No
 - **Default**: `7`
@@ -332,6 +372,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `RETENTION_BATCH_SIZE`
+
 - **Description**: Batch size for deletion operations
 - **Required**: No
 - **Default**: `1000`
@@ -339,6 +380,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `RETENTION_CRON`
+
 - **Description**: Cron expression for retention job
 - **Required**: No
 - **Default**: `0 0 2 ? * SUN` (Every Sunday at 2 AM)
@@ -347,6 +389,7 @@ This document provides comprehensive documentation for all environment variables
 - **Format**: Cron expression
 
 ### `RETENTION_MAX_RETRIES`
+
 - **Description**: Maximum retry attempts for failed deletions
 - **Required**: No
 - **Default**: `3`
@@ -354,6 +397,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `RETENTION_RETRY_DELAY_MS`
+
 - **Description**: Delay between retry attempts in milliseconds
 - **Required**: No
 - **Default**: `1000`
@@ -365,6 +409,7 @@ This document provides comprehensive documentation for all environment variables
 ## Feature Flags (Frontend)
 
 ### `NEXT_PUBLIC_DEBUG_LOGGING`
+
 - **Description**: Enable debug logging in browser console
 - **Required**: No
 - **Default**: `true` (dev), `false` (prod)
@@ -372,6 +417,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: Dev, Local
 
 ### `NEXT_PUBLIC_TYPING_INDICATORS`
+
 - **Description**: Enable typing indicator feature
 - **Required**: No
 - **Default**: `true`
@@ -379,6 +425,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_READ_RECEIPTS`
+
 - **Description**: Enable read receipt feature
 - **Required**: No
 - **Default**: `true`
@@ -386,6 +433,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_PRESENCE`
+
 - **Description**: Enable presence (online/offline) feature
 - **Required**: No
 - **Default**: `true`
@@ -393,6 +441,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_MAX_MESSAGE_LENGTH`
+
 - **Description**: Maximum message length in characters
 - **Required**: No
 - **Default**: `5000`
@@ -400,6 +449,7 @@ This document provides comprehensive documentation for all environment variables
 - **Environment**: All
 
 ### `NEXT_PUBLIC_MESSAGE_RETENTION_DAYS`
+
 - **Description**: Display value for message retention
 - **Required**: No
 - **Default**: `7`
@@ -408,6 +458,7 @@ This document provides comprehensive documentation for all environment variables
 - **Note**: Should match backend `RETENTION_DAYS`
 
 ### `NEXT_PUBLIC_MESSAGE_PAGE_SIZE`
+
 - **Description**: Number of messages loaded per page
 - **Required**: No
 - **Default**: `50`
@@ -419,6 +470,7 @@ This document provides comprehensive documentation for all environment variables
 ## Logging
 
 ### `LOG_FILE`
+
 - **Description**: Log file path
 - **Required**: No
 - **Default**: `logs/linkwave.log`
@@ -430,6 +482,7 @@ This document provides comprehensive documentation for all environment variables
 ## Quick Setup Guide
 
 ### Development (.env.local)
+
 ```bash
 # Database
 POSTGRES_PASSWORD=dev_password
@@ -444,6 +497,7 @@ MAIL_TLS_ENABLED=false
 ```
 
 ### Production (.env)
+
 ```bash
 # Database (Required)
 POSTGRES_DB=linkwave_prod
@@ -493,6 +547,7 @@ SESSION_TIMEOUT=60m
 ## Environment Profiles
 
 ### `local` (Default Development)
+
 - Mailhog for email testing
 - Relaxed security (HTTP cookies)
 - Debug logging enabled
@@ -500,6 +555,7 @@ SESSION_TIMEOUT=60m
 - Redis on port 6380
 
 ### `prod` (Production)
+
 - Real SMTP server required
 - Strict security (HTTPS cookies)
 - INFO level logging

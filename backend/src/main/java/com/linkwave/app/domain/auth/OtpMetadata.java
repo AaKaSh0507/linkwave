@@ -4,29 +4,29 @@ import java.time.Instant;
 
 public class OtpMetadata {
 
-    private final String otpValue;
-    private final Instant createdAt;
-    private final Instant expiresAt;
+  private final String otpValue;
+  private final Instant createdAt;
+  private final Instant expiresAt;
 
-    public OtpMetadata(String otpValue, Instant createdAt, Instant expiresAt) {
-        this.otpValue = otpValue;
-        this.createdAt = createdAt;
-        this.expiresAt = expiresAt;
-    }
+  public OtpMetadata(String otpValue, Instant createdAt, Instant expiresAt) {
+    this.otpValue = otpValue;
+    this.createdAt = createdAt;
+    this.expiresAt = expiresAt;
+  }
 
-    public String getOtpValue() {
-        return otpValue;
-    }
+  public String getOtpValue() {
+    return otpValue;
+  }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
 
-    public Instant getExpiresAt() {
-        return expiresAt;
-    }
+  public Instant getExpiresAt() {
+    return expiresAt;
+  }
 
-    public boolean isExpired() {
-        return Instant.now().isAfter(expiresAt);
-    }
+  public boolean isExpired() {
+    return Instant.now().isAfter(expiresAt);
+  }
 }

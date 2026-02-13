@@ -28,7 +28,7 @@ export function MessageInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
-    
+
     // Enforce max message length
     if (value.length <= config.messages.maxLength) {
       setMessage(value)

@@ -17,34 +17,34 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 @Profile("!test")
 public class SessionConfig {
 
-    private final RedisConfig redisConfig;
+  private final RedisConfig redisConfig;
 
-    public SessionConfig(RedisConfig redisConfig) {
-        this.redisConfig = redisConfig;
+  public SessionConfig(RedisConfig redisConfig) {
+    this.redisConfig = redisConfig;
+  }
+
+  @Bean
+  public RedisConnectionFactory redisConnectionFactory() {
+    RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+    config.setHostName(this.redisConfig.getHost());
+    config.setPort(this.redisConfig.getPort());
+
+    if (this.redisConfig.getPassword() != null && !this.redisConfig.getPassword().isEmpty()) {
+      config.setPassword(RedisPassword.of(this.redisConfig.getPassword()));
     }
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(this.redisConfig.getHost());
-        config.setPort(this.redisConfig.getPort());
+    return new LettuceConnectionFactory(config);
+  }
 
-        if (this.redisConfig.getPassword() != null && !this.redisConfig.getPassword().isEmpty()) {
-            config.setPassword(RedisPassword.of(this.redisConfig.getPassword()));
-        }
-
-        return new LettuceConnectionFactory(config);
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.afterPropertiesSet();
-        return template;
-    }
+  @Bean
+  public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    RedisTemplate<String, Object> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+    template.setKeySerializer(new StringRedisSerializer());
+    template.setHashKeySerializer(new StringRedisSerializer());
+    template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+    template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+    template.afterPropertiesSet();
+    return template;
+  }
 }

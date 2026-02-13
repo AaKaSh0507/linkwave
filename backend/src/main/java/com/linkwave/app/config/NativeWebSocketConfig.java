@@ -12,19 +12,20 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class NativeWebSocketConfig implements WebSocketConfigurer {
 
-    private final NativeWebSocketHandler webSocketHandler;
-    private final WsAuthenticationInterceptor authInterceptor;
+  private final NativeWebSocketHandler webSocketHandler;
+  private final WsAuthenticationInterceptor authInterceptor;
 
-    public NativeWebSocketConfig(NativeWebSocketHandler webSocketHandler,
-            WsAuthenticationInterceptor authInterceptor) {
-        this.webSocketHandler = webSocketHandler;
-        this.authInterceptor = authInterceptor;
-    }
+  public NativeWebSocketConfig(
+      NativeWebSocketHandler webSocketHandler, WsAuthenticationInterceptor authInterceptor) {
+    this.webSocketHandler = webSocketHandler;
+    this.authInterceptor = authInterceptor;
+  }
 
-    @Override
-    public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
-        registry.addHandler(webSocketHandler, "/ws")
-                .setAllowedOrigins("http://localhost:3000") // Allow frontend origin
-                .addInterceptors(authInterceptor); // Validate session before handshake
-    }
+  @Override
+  public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
+    registry
+        .addHandler(webSocketHandler, "/ws")
+        .setAllowedOrigins("http://localhost:3000") // Allow frontend origin
+        .addInterceptors(authInterceptor); // Validate session before handshake
+  }
 }

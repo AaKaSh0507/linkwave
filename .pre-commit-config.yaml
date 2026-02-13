@@ -18,7 +18,7 @@
 #   pre-commit autoupdate
 # =============================================================================
 
-default_stages: [commit]
+default_stages: [pre-commit]
 fail_fast: false
 minimum_pre_commit_version: "3.0.0"
 
@@ -43,7 +43,7 @@ repos:
   # UNIVERSAL CHECKS - All Files
   # ===========================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       # Whitespace and formatting
       - id: trailing-whitespace
@@ -109,11 +109,11 @@ repos:
   # SECURITY SCANNING
   # ===========================================================================
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
+    rev: v8.30.0
     hooks:
       - id: gitleaks
         name: "🔒 Scan for secrets (Gitleaks)"
-        stages: [commit]
+        stages: [pre-commit]
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
@@ -136,7 +136,7 @@ repos:
   # JAVA / SPRING BOOT CHECKS
   # ===========================================================================
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.14.0
+    rev: v2.16.0
     hooks:
       - id: pretty-format-java
         name: "☕ Format Java (Google Style)"
@@ -158,7 +158,7 @@ repos:
         language: system
         files: ^backend/src/main/java/.*\.java$
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: no-system-out-println
         name: "🚫 No System.out.println"
@@ -176,7 +176,8 @@ repos:
 
       - id: java-test-naming
         name: "📝 Validate test naming conventions"
-        entry: bash -c 'find backend/src/test/java -name "*.java" 2>/dev/null | while read f; do basename "$f" | grep -qE "^.*Test\.java$|^.*Tests\.java$|^.*IT\.java$" || echo "Warning: $f does not follow test naming convention (*Test.java, *Tests.java, or *IT.java)"; done'
+        entry: |
+          bash -c 'find backend/src/test/java -name "*.java" 2>/dev/null | while read f; do basename "$f" | grep -qE "^.*Test\.java$|^.*Tests\.java$|^.*IT\.java$" || echo "Warning: $f does not follow test naming convention (*Test.java, *Tests.java, or *IT.java)"; done'
         language: system
         files: ^backend/src/test/java/.*\.java$
         pass_filenames: false
@@ -206,7 +207,7 @@ repos:
         language: system
         files: ^frontend/.*\.(ts|tsx)$
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: no-console-log
         name: "🚫 No console.log in production"
@@ -221,13 +222,13 @@ repos:
         language: system
         files: ^frontend/package\.json$
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
   # ===========================================================================
   # COMMIT MESSAGE VALIDATION
   # ===========================================================================
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.29.0
+    rev: v4.13.7
     hooks:
       - id: commitizen
         name: "📝 Validate commit message"
@@ -237,7 +238,7 @@ repos:
   # MARKDOWN & DOCUMENTATION
   # ===========================================================================
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.42.0
+    rev: v0.47.0
     hooks:
       - id: markdownlint
         name: "📖 Lint Markdown files"
@@ -252,7 +253,7 @@ repos:
   # DOCKER & INFRASTRUCTURE
   # ===========================================================================
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
+    rev: v2.14.0
     hooks:
       - id: hadolint-docker
         name: "🐳 Lint Dockerfiles"
@@ -263,18 +264,19 @@ repos:
           "--ignore", "DL3013",  # Pin pip versions
         ]
 
-  - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.29.2
-    hooks:
-      - id: check-compose
-        name: "🐳 Validate Docker Compose"
-        files: docker-compose.*\.ya?ml$
+  # Disabled: check-compose hook not available in this version
+  # - repo: https://github.com/python-jsonschema/check-jsonschema
+  #   rev: 0.29.2
+  #   hooks:
+  #     - id: check-compose
+  #       name: "🐳 Validate Docker Compose"
+  #       files: docker-compose.*\.ya?ml$
 
   # ===========================================================================
   # SQL LINTING
   # ===========================================================================
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 3.2.0
+    rev: 4.0.4
     hooks:
       - id: sqlfluff-lint
         name: "🗄️  Lint SQL files"
@@ -290,14 +292,14 @@ repos:
   # SHELL SCRIPTS
   # ===========================================================================
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         name: "🐚 Lint shell scripts"
         args: ["--severity=warning"]
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.8.0-1
+    rev: v3.12.0-2
     hooks:
       - id: shfmt
         name: "🔧 Format shell scripts"
@@ -326,7 +328,7 @@ repos:
         name: "🌿 Check branch naming convention"
         entry: .pre-commit-hooks/check-branch-naming.sh
         language: script
-        stages: [commit]
+        stages: [pre-commit]
         pass_filenames: false
         always_run: true
 
@@ -339,7 +341,8 @@ repos:
 
       - id: check-env-files
         name: "🔐 Block .env files"
-        entry: bash -c 'for f in "$@"; do if [[ "$f" =~ \.env$ ]] && [[ ! "$f" =~ \.env\.example$ ]] && [[ ! "$f" =~ \.env\.template$ ]]; then echo "❌ Blocked: $f - Never commit .env files!"; exit 1; fi; done'
+        entry: |
+          bash -c 'for f in "$@"; do if [[ "$f" =~ \.env$ ]] && [[ ! "$f" =~ \.env\.example$ ]] && [[ ! "$f" =~ \.env\.template$ ]]; then echo "❌ Blocked: $f - Never commit .env files!"; exit 1; fi; done'
         language: system
         files: \.env.*$
         exclude: \.(env\.example|env\.template|env\.sample)$

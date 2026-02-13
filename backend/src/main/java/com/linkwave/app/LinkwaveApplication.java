@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class LinkwaveApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(LinkwaveApplication.class, args);
-    }
-
+  public static void main(String[] args) {
+    SpringApplication.run(LinkwaveApplication.class, args);
+  }
 }

@@ -17,16 +17,16 @@ NC='\033[0m' # No Color
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
 if [[ -z "$BRANCH" ]]; then
-    echo -e "${YELLOW}⚠️  Could not determine branch name${NC}"
-    exit 0
+  echo -e "${YELLOW}⚠️  Could not determine branch name${NC}"
+  exit 0
 fi
 
 echo "🌿 Checking branch naming convention..."
 
 # Skip for main/master/develop branches
 if [[ "$BRANCH" =~ ^(main|master|develop|development|staging|release/.*)$ ]]; then
-    echo -e "${GREEN}✓ Branch '$BRANCH' is a protected/release branch${NC}"
-    exit 0
+  echo -e "${GREEN}✓ Branch '$BRANCH' is a protected/release branch${NC}"
+  exit 0
 fi
 
 # Branch naming pattern:
@@ -45,8 +45,8 @@ VALID_PATTERN="^(feature|bugfix|hotfix|fix|chore|docs|refactor|test|ci|perf|styl
 TICKET_PATTERN="^(feature|bugfix|hotfix|fix)\/[A-Z]+-[0-9]+-[a-z0-9-]+$"
 
 if [[ "$BRANCH" =~ $VALID_PATTERN ]] || [[ "$BRANCH" =~ $TICKET_PATTERN ]]; then
-    echo -e "${GREEN}✓ Branch name '$BRANCH' follows convention${NC}"
-    exit 0
+  echo -e "${GREEN}✓ Branch name '$BRANCH' follows convention${NC}"
+  exit 0
 fi
 
 # Show warning but don't fail (to not block developers)

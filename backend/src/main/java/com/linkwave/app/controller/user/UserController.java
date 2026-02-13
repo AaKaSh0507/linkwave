@@ -3,6 +3,7 @@ package com.linkwave.app.controller.user;
 import com.linkwave.app.domain.auth.AuthenticatedUserContext;
 import com.linkwave.app.domain.user.UserProfilePayload;
 import com.linkwave.app.service.session.SessionService;
+import java.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -12,60 +13,56 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-
 @RestController
 @RequestMapping("/api/v1/user")
 public class UserController {
 
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
-    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
+  private static final Logger log = LoggerFactory.getLogger(UserController.class);
+  private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
-    private final SessionService sessionService;
+  private final SessionService sessionService;
 
-    public UserController(SessionService sessionService) {
-        this.sessionService = sessionService;
-    }
+  public UserController(SessionService sessionService) {
+    this.sessionService = sessionService;
+  }
 
-    @GetMapping("/me")
-    public ResponseEntity<UserProfilePayload> getCurrentUser() {
-        Authentication springAuth = SecurityContextHolder.getContext().getAuthentication();
-        if (springAuth != null && springAuth.isAuthenticated() &&
-                !"anonymousUser".equals(springAuth.getPrincipal())) {
-            AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
-                    .orElse(null);
+  @GetMapping("/me")
+  public ResponseEntity<UserProfilePayload> getCurrentUser() {
+    Authentication springAuth = SecurityContextHolder.getContext().getAuthentication();
+    if (springAuth != null
+        && springAuth.isAuthenticated()
+        && !"anonymousUser".equals(springAuth.getPrincipal())) {
+      AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser().orElse(null);
 
-            if (userContext == null) {
-                log.warn("Unauthorized access attempt to /me endpoint");
-                return ResponseEntity.status(401).build();
-            }
-
-            String maskedPhone = userContext.getMaskedPhoneNumber();
-            String authenticatedAt = ISO_FORMATTER.format(userContext.getAuthenticatedAt());
-
-            UserProfilePayload profile = new UserProfilePayload(maskedPhone, authenticatedAt);
-
-            log.info("User profile accessed: {}", maskedPhone);
-
-            return ResponseEntity.ok(profile);
-        }
-
+      if (userContext == null) {
         log.warn("Unauthorized access attempt to /me endpoint");
         return ResponseEntity.status(401).build();
+      }
+
+      String maskedPhone = userContext.getMaskedPhoneNumber();
+      String authenticatedAt = ISO_FORMATTER.format(userContext.getAuthenticatedAt());
+
+      UserProfilePayload profile = new UserProfilePayload(maskedPhone, authenticatedAt);
+
+      log.info("User profile accessed: {}", maskedPhone);
+
+      return ResponseEntity.ok(profile);
     }
 
-    @GetMapping("/contacts")
-    public ResponseEntity<java.util.List<Object>> getContacts() {
-        AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser()
-                .orElse(null);
+    log.warn("Unauthorized access attempt to /me endpoint");
+    return ResponseEntity.status(401).build();
+  }
 
-        if (userContext == null) {
-            log.warn("Unauthorized access attempt to /contacts endpoint");
-            return ResponseEntity.status(401).build();
-        }
+  @GetMapping("/contacts")
+  public ResponseEntity<java.util.List<Object>> getContacts() {
+    AuthenticatedUserContext userContext = sessionService.getAuthenticatedUser().orElse(null);
 
-        log.info("Contacts accessed by: {}", userContext.getMaskedPhoneNumber());
-        return ResponseEntity.ok(java.util.Collections.emptyList());
+    if (userContext == null) {
+      log.warn("Unauthorized access attempt to /contacts endpoint");
+      return ResponseEntity.status(401).build();
     }
+
+    log.info("Contacts accessed by: {}", userContext.getMaskedPhoneNumber());
+    return ResponseEntity.ok(java.util.Collections.emptyList());
+  }
 }

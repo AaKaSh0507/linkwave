@@ -44,4 +44,3 @@ export function LoadingIndicator({ message = 'Loading...' }: LoadingIndicatorPro
     </div>
   )
 }
-

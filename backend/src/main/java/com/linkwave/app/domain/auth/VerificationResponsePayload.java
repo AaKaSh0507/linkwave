@@ -2,19 +2,19 @@ package com.linkwave.app.domain.auth;
 
 public class VerificationResponsePayload {
 
-    private final boolean authenticated;
-    private final String message;
+  private final boolean authenticated;
+  private final String message;
 
-    public VerificationResponsePayload(boolean authenticated, String message) {
-        this.authenticated = authenticated;
-        this.message = message;
-    }
+  public VerificationResponsePayload(boolean authenticated, String message) {
+    this.authenticated = authenticated;
+    this.message = message;
+  }
 
-    public boolean isAuthenticated() {
-        return authenticated;
-    }
+  public boolean isAuthenticated() {
+    return authenticated;
+  }
 
-    public String getMessage() {
-        return message;
-    }
+  public String getMessage() {
+    return message;
+  }
 }

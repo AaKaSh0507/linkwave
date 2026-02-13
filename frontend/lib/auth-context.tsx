@@ -39,23 +39,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const requestOTP = useCallback(async (phoneNumber: string, email: string) => {
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] Requesting OTP for:', phoneNumber, email)
-    }
+
     const response = await apiCall<{ otpId: string }>('/api/v1/auth/request-otp', {
       method: 'POST',
       body: JSON.stringify({ phoneNumber, email }),
     })
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] OTP requested, ID:', response.otpId)
-    }
+
     return response
   }, [])
 
   const verifyOTP = useCallback(async (otpId: string, otp: string) => {
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] Verifying OTP for ID:', otpId)
-    }
+
     const response = await apiCall<AuthResponse>('/api/v1/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify({ otpId, otp }),
@@ -72,9 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status: 'online',
     })
 
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] User authenticated:', response.user.id)
-    }
+
   }, [])
 
   const logout = useCallback(() => {

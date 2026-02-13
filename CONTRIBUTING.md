@@ -73,7 +73,7 @@ pre-commit install --hook-type commit-msg
 ### What Gets Checked
 
 | Category | Checks |
-|----------|--------|
+| -------- | ------ |
 | **Universal** | Trailing whitespace, EOF newline, YAML/JSON syntax, large files |
 | **Security** | Secrets detection (Gitleaks, detect-secrets), private keys |
 | **Java** | Google Java Format, Checkstyle, no System.out.println |
@@ -189,7 +189,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/) specifica
 
 ### Format
 
-```
+```text
 type(scope): subject
 
 [optional body]
@@ -200,7 +200,7 @@ type(scope): subject
 ### Types
 
 | Type | Description |
-|------|-------------|
+| ---- | ----------- |
 | `feat` | New feature |
 | `fix` | Bug fix |
 | `docs` | Documentation only |
@@ -317,7 +317,7 @@ make test
 
 ## Branch Naming
 
-```
+```text
 feature/LW-123-user-authentication
 bugfix/LW-456-fix-login-error
 hotfix/LW-789-security-patch

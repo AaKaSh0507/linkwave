@@ -19,9 +19,7 @@ export class ChatWebSocket {
     this.maxReconnectAttempts = config.websocket.maxReconnectAttempts
     this.reconnectDelay = config.websocket.reconnectDelay
 
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] WebSocket initialized with URL:', this.url)
-    }
+
   }
 
   connect(): Promise<void> {
@@ -30,9 +28,7 @@ export class ChatWebSocket {
         this.ws = new WebSocket(this.url)
 
         this.ws.onopen = () => {
-          if (config.features.enableDebugLogging) {
-            console.log('[v0] WebSocket connected')
-          }
+
           this.isConnected = true
           this.reconnectAttempts = 0
           this.flushMessageQueue()
@@ -49,9 +45,7 @@ export class ChatWebSocket {
         }
 
         this.ws.onclose = () => {
-          if (config.features.enableDebugLogging) {
-            console.log('[v0] WebSocket disconnected')
-          }
+
           this.isConnected = false
           this.attemptReconnect()
         }
@@ -66,9 +60,7 @@ export class ChatWebSocket {
       const message = JSON.parse(data)
       const { type, payload } = message
 
-      if (config.features.enableDebugLogging) {
-        console.log('[v0] WebSocket message received:', { type, payload })
-      }
+
 
       // Emit to listeners
       const handlers = this.listeners.get(type)
@@ -92,9 +84,7 @@ export class ChatWebSocket {
   private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
-      console.log(
-        `[v0] Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      )
+
       setTimeout(() => this.connect().catch(console.error), this.reconnectDelay)
     } else {
       console.error('[v0] Max reconnection attempts reached')
@@ -104,16 +94,12 @@ export class ChatWebSocket {
   send(type: string, payload: any) {
     const message = JSON.stringify({ type, payload })
 
-    if (config.features.enableDebugLogging) {
-      console.log('[v0] WebSocket sending:', { type, payload })
-    }
+
 
     if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(message)
     } else {
-      if (config.features.enableDebugLogging) {
-        console.log('[v0] Message queued (not connected)')
-      }
+
       this.messageQueue.push(message)
     }
   }

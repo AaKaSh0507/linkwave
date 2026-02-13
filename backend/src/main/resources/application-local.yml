@@ -2,13 +2,13 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/linkwave}
     username: ${DATABASE_USERNAME:linkwave}
-    password: ${DATABASE_PASSWORD:changeme}
+    password: ${DATABASE_PASSWORD:changeme} # pragma: allowlist secret
 
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
-      password: ${REDIS_PASSWORD:changeme}
+      password: ${REDIS_PASSWORD:changeme} # pragma: allowlist secret
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}

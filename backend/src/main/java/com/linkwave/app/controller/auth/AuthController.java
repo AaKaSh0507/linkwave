@@ -8,6 +8,7 @@ import com.linkwave.app.service.auth.EmailService;
 import com.linkwave.app.service.auth.OtpService;
 import com.linkwave.app.service.session.SessionService;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -15,96 +16,90 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/v1/auth")
 @Validated
 public class AuthController {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+  private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    private final OtpService otpService;
-    private final SessionService sessionService;
+  private final OtpService otpService;
+  private final SessionService sessionService;
 
-    public AuthController(OtpService otpService, SessionService sessionService) {
-        this.otpService = otpService;
-        this.sessionService = sessionService;
+  public AuthController(OtpService otpService, SessionService sessionService) {
+    this.otpService = otpService;
+    this.sessionService = sessionService;
+  }
+
+  @PostMapping("/request-otp")
+  public ResponseEntity<Map<String, String>> requestOtp(
+      @Valid @RequestBody OtpRequestPayload payload) {
+
+    otpService.requestOtp(payload.getPhoneNumber(), payload.getEmail());
+
+    return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
+  }
+
+  @PostMapping("/verify-otp")
+  public ResponseEntity<VerificationResponsePayload> verifyOtp(
+      @Valid @RequestBody VerificationRequestPayload payload) {
+
+    otpService.verifyOtp(payload.getPhoneNumber(), payload.getOtp());
+    AuthenticatedUserContext userContext =
+        sessionService.authenticateSession(payload.getPhoneNumber());
+    log.info("User authenticated: {}", userContext.getMaskedPhoneNumber());
+
+    return ResponseEntity.ok(new VerificationResponsePayload(true, "Authentication successful"));
+  }
+
+  @GetMapping("/csrf")
+  public ResponseEntity<Map<String, String>> getCsrfToken(
+      org.springframework.security.web.csrf.CsrfToken token) {
+
+    if (token == null) {
+      return ResponseEntity.ok(Map.of("message", "CSRF protection disabled"));
     }
 
-    @PostMapping("/request-otp")
-    public ResponseEntity<Map<String, String>> requestOtp(
-            @Valid @RequestBody OtpRequestPayload payload) {
-
-        otpService.requestOtp(payload.getPhoneNumber(), payload.getEmail());
-
-        return ResponseEntity.ok(Map.of(
-            "message", "OTP sent successfully"
-        ));
-    }
-
-    @PostMapping("/verify-otp")
-    public ResponseEntity<VerificationResponsePayload> verifyOtp(
-            @Valid @RequestBody VerificationRequestPayload payload) {
-
-        otpService.verifyOtp(payload.getPhoneNumber(), payload.getOtp());
-        AuthenticatedUserContext userContext = sessionService.authenticateSession(payload.getPhoneNumber());
-        log.info("User authenticated: {}", userContext.getMaskedPhoneNumber());
-
-        return ResponseEntity.ok(
-            new VerificationResponsePayload(true, "Authentication successful")
-        );
-    }
-
-    @GetMapping("/csrf")
-    public ResponseEntity<Map<String, String>> getCsrfToken(
-            org.springframework.security.web.csrf.CsrfToken token) {
-
-        if (token == null) {
-            return ResponseEntity.ok(Map.of("message", "CSRF protection disabled"));
-        }
-
-        return ResponseEntity.ok(Map.of(
+    return ResponseEntity.ok(
+        Map.of(
             "token", token.getToken(),
             "headerName", token.getHeaderName(),
-            "parameterName", token.getParameterName()
-        ));
-    }
+            "parameterName", token.getParameterName()));
+  }
 
-    @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
-        sessionService.invalidateSession();
+  @PostMapping("/logout")
+  public ResponseEntity<Map<String, String>> logout() {
+    sessionService.invalidateSession();
 
-        log.info("User logged out successfully");
+    log.info("User logged out successfully");
 
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
-    }
+    return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+  }
 
-    @ExceptionHandler(OtpService.OtpThrottleException.class)
-    public ResponseEntity<Map<String, String>> handleThrottleException(
-            OtpService.OtpThrottleException ex) {
+  @ExceptionHandler(OtpService.OtpThrottleException.class)
+  public ResponseEntity<Map<String, String>> handleThrottleException(
+      OtpService.OtpThrottleException ex) {
 
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-            .body(Map.of("error", ex.getMessage()));
-    }
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        .body(Map.of("error", ex.getMessage()));
+  }
 
-    @ExceptionHandler(EmailService.EmailDeliveryException.class)
-    public ResponseEntity<Map<String, String>> handleEmailDeliveryException(
-            EmailService.EmailDeliveryException ex) {
+  @ExceptionHandler(EmailService.EmailDeliveryException.class)
+  public ResponseEntity<Map<String, String>> handleEmailDeliveryException(
+      EmailService.EmailDeliveryException ex) {
 
-        log.error("Email delivery failed: {}", ex.getMessage());
+    log.error("Email delivery failed: {}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(Map.of("error", "Failed to send OTP. Please try again later."));
-    }
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(Map.of("error", "Failed to send OTP. Please try again later."));
+  }
 
-    @ExceptionHandler(OtpService.OtpVerificationException.class)
-    public ResponseEntity<Map<String, String>> handleVerificationException(
-            OtpService.OtpVerificationException ex) {
+  @ExceptionHandler(OtpService.OtpVerificationException.class)
+  public ResponseEntity<Map<String, String>> handleVerificationException(
+      OtpService.OtpVerificationException ex) {
 
-        log.warn("OTP verification failed: {}", ex.getMessage());
+    log.warn("OTP verification failed: {}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", ex.getMessage()));
-    }
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+  }
 }

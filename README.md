@@ -8,6 +8,7 @@ A modern, real-time chat application built with Spring Boot and Next.js, featuri
 ## 🏗️ Architecture
 
 **Backend:**
+
 - Spring Boot 3.x with Java 21
 - WebSocket support for real-time messaging
 - PostgreSQL database
@@ -15,6 +16,7 @@ A modern, real-time chat application built with Spring Boot and Next.js, featuri
 - Gradle build system
 
 **Frontend:**
+
 - Next.js 15+ with React 19
 - TypeScript
 - TailwindCSS for styling
@@ -46,19 +48,22 @@ docker-compose -f docker-compose.prod.yml up -d
 ```
 
 The application will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8080>
 - WebSocket: ws://localhost:8080/ws
 
 ### Local Development
 
 **Backend:**
+
 ```bash
 cd backend
 ./gradlew bootRun
 ```
 
 **Frontend:**
+
 ```bash
 cd frontend
 npm install
@@ -124,12 +129,14 @@ docker run -d \
 The project uses GitHub Actions for automated building and publishing of Docker images.
 
 **Triggers:**
+
 - Push to `main` branch → Build and push `latest` tag
 - Git tags (`v*.*.*`) → Build and push versioned releases
 - Pull requests → Build only (validation, no push)
 - Manual workflow dispatch → On-demand builds
 
 **Build Jobs:**
+
 - `build-backend` - Builds Spring Boot application (parallel)
 - `build-frontend` - Builds Next.js application (parallel)
 - `security-scan` - Scans images for vulnerabilities with Trivy
@@ -137,7 +144,7 @@ The project uses GitHub Actions for automated building and publishing of Docker 
 ### Image Tagging Strategy
 
 | Event | Tags Generated |
-|-------|---------------|
+| ----- | -------------- |
 | Push to `main` | `latest`, `sha-a1b2c3d4` |
 | Tag `v1.2.3` | `1.2.3`, `1.2`, `1`, `latest`, `sha-a1b2c3d4` |
 | PR #42 | `pr-42` (build only, not pushed) |
@@ -154,6 +161,7 @@ The project uses GitHub Actions for automated building and publishing of Docker 
 The workflow uses GitHub Container Registry (GHCR) which automatically authenticates using `GITHUB_TOKEN`. No additional secrets are required.
 
 **Optional Secrets** (for custom API/WS URLs in frontend builds):
+
 - `NEXT_PUBLIC_API_URL` - Backend API URL (default: `http://localhost:8080`)
 - `NEXT_PUBLIC_WS_URL` - WebSocket URL (default: `ws://localhost:8080/ws`)
 
@@ -168,11 +176,13 @@ The workflow uses GitHub Container Registry (GHCR) which automatically authentic
 ### Security Scanning
 
 All pushed images are automatically scanned with [Trivy](https://github.com/aquasecurity/trivy) for:
+
 - HIGH and CRITICAL vulnerabilities
 - Known CVEs in dependencies
 - Container misconfigurations
 
 Scan results are:
+
 - Uploaded to GitHub Security tab
 - Available as workflow artifacts (retained for 7 days)
 - Non-blocking (workflow succeeds even with vulnerabilities)
@@ -215,19 +225,22 @@ pre-commit run --all-files
 ### Making Changes
 
 1. Create a feature branch from `main`:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 2. Make your changes and commit:
+
    ```bash
    git add .
    git commit -m "feat: your feature description"
    ```
-   
+
    Follow [Conventional Commits](https://www.conventionalcommits.org/) format.
 
 3. Push your branch:
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -244,6 +257,7 @@ pre-commit run --all-files
 ### Creating Releases
 
 1. Create and push a version tag:
+
    ```bash
    git tag -a v1.0.0 -m "Release version 1.0.0"
    git push origin v1.0.0
@@ -267,6 +281,7 @@ git commit -m "docs: update README [skip ci]"
 ### Environment Variables
 
 **Backend:**
+
 ```bash
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/linkwave
 SPRING_DATASOURCE_USERNAME=postgres
@@ -276,6 +291,7 @@ SPRING_REDIS_PORT=6379
 ```
 
 **Frontend:**
+
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
@@ -283,7 +299,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
 
 ## 📦 Project Structure
 
-```
+```text
 linkwave/
 ├── backend/              # Spring Boot backend
 │   ├── src/

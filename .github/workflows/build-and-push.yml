@@ -28,25 +28,25 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -64,7 +64,7 @@ jobs:
             org.opencontainers.image.title=Linkwave Backend
             org.opencontainers.image.description=Linkwave Chat Application - Spring Boot Backend
             org.opencontainers.image.vendor=Linkwave Team
-      
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v5
@@ -78,7 +78,7 @@ jobs:
           cache-from: type=gha,scope=backend-${{ github.ref_name }}
           cache-to: type=gha,mode=max,scope=backend-${{ github.ref_name }}
           provenance: false
-      
+
       - name: Display build results
         run: |
           echo "### Backend Build Results :rocket:" >> $GITHUB_STEP_SUMMARY
@@ -102,25 +102,25 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -138,7 +138,7 @@ jobs:
             org.opencontainers.image.title=Linkwave Frontend
             org.opencontainers.image.description=Linkwave Chat Application - Next.js Frontend
             org.opencontainers.image.vendor=Linkwave Team
-      
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v5
@@ -155,7 +155,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8080' }}
             NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws' }}
-      
+
       - name: Display build results
         run: |
           echo "### Frontend Build Results :rocket:" >> $GITHUB_STEP_SUMMARY
@@ -180,11 +180,11 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    
+
     strategy:
       matrix:
         service: [backend, frontend]
-    
+
     steps:
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -192,7 +192,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract image tag
         id: extract-tag
         run: |
@@ -203,7 +203,7 @@ jobs:
             TAG="sha-$(echo ${{ github.sha }} | cut -c1-8)"
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -213,7 +213,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           timeout: '10m'
         continue-on-error: true
-      
+
       - name: Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -221,7 +221,7 @@ jobs:
           sarif_file: 'trivy-${{ matrix.service }}-results.sarif'
           category: 'trivy-${{ matrix.service }}'
         continue-on-error: true
-      
+
       - name: Run Trivy vulnerability scanner (Table format)
         uses: aquasecurity/trivy-action@master
         with:
@@ -230,7 +230,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           timeout: '10m'
         continue-on-error: true
-      
+
       - name: Upload scan artifacts
         uses: actions/upload-artifact@v4
         if: always()

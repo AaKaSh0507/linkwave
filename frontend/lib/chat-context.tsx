@@ -52,10 +52,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Define helper functions first (before they're used in callbacks)
+  const addMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message])
+  }, [])
+
+  const updateUserPresence = useCallback((userId: string, status: 'online' | 'offline') => {
+    setParticipants((prev) => {
+      const updated = new Map(prev)
+      const user = updated.get(userId)
+      if (user) {
+        updated.set(userId, {
+          ...user,
+          status,
+          lastSeen: new Date().toISOString(),
+        })
+      }
+      return updated
+    })
+  }, [])
+
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback(
     (type: string, data: any) => {
-      console.log('[v0] WebSocket message:', type, data)
+
 
       switch (type) {
         case 'MESSAGE':
@@ -95,7 +115,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           console.warn('[v0] Unknown WebSocket message type:', type)
       }
     },
-    [currentConversation?.id]
+    [currentConversation?.id, addMessage, updateUserPresence]
   )
 
   const { isConnected: wsConnected } = useWebSocket(handleWebSocketMessage)
@@ -143,27 +163,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.error('[v0] Failed to send message:', error)
       }
     },
-    [currentConversation]
+    [currentConversation, addMessage]
   )
-
-  const addMessage = useCallback((message: Message) => {
-    setMessages((prev) => [...prev, message])
-  }, [])
-
-  const updateUserPresence = useCallback((userId: string, status: 'online' | 'offline') => {
-    setParticipants((prev) => {
-      const updated = new Map(prev)
-      const user = updated.get(userId)
-      if (user) {
-        updated.set(userId, {
-          ...user,
-          status,
-          lastSeen: new Date().toISOString(),
-        })
-      }
-      return updated
-    })
-  }, [])
 
   const getOrCreateConversation = useCallback(async (userId: string): Promise<Conversation> => {
     try {
@@ -183,7 +184,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     (conversationId: string, isTyping: boolean) => {
       if (wsConnected) {
         // Send via WebSocket
-        console.log('[v0] Sending typing indicator:', { conversationId, isTyping })
+
         // This will be handled by the WebSocket's send method in components
       }
     },

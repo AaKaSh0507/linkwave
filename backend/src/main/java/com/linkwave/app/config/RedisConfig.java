@@ -9,49 +9,49 @@ import org.springframework.context.annotation.Profile;
 @Profile("!test")
 public class RedisConfig {
 
-    private String host = "localhost";
-    private int port = 6379;
-    private String password;
-    private int sessionTimeoutMinutes = 30;
-    private String namespace = "linkwave:session:";
+  private String host = "localhost";
+  private int port = 6379;
+  private String password;
+  private int sessionTimeoutMinutes = 30;
+  private String namespace = "linkwave:session:";
 
-    public String getHost() {
-        return host;
-    }
+  public String getHost() {
+    return host;
+  }
 
-    public void setHost(String host) {
-        this.host = host;
-    }
+  public void setHost(String host) {
+    this.host = host;
+  }
 
-    public int getPort() {
-        return port;
-    }
+  public int getPort() {
+    return port;
+  }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
+  public void setPort(int port) {
+    this.port = port;
+  }
 
-    public String getPassword() {
-        return password;
-    }
+  public String getPassword() {
+    return password;
+  }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+  public void setPassword(String password) {
+    this.password = password;
+  }
 
-    public int getSessionTimeoutMinutes() {
-        return sessionTimeoutMinutes;
-    }
+  public int getSessionTimeoutMinutes() {
+    return sessionTimeoutMinutes;
+  }
 
-    public void setSessionTimeoutMinutes(int sessionTimeoutMinutes) {
-        this.sessionTimeoutMinutes = sessionTimeoutMinutes;
-    }
+  public void setSessionTimeoutMinutes(int sessionTimeoutMinutes) {
+    this.sessionTimeoutMinutes = sessionTimeoutMinutes;
+  }
 
-    public String getNamespace() {
-        return namespace;
-    }
+  public String getNamespace() {
+    return namespace;
+  }
 
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
 }
