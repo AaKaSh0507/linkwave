@@ -340,6 +340,100 @@ class AuthenticationFunctionalTest extends FunctionalTestBase {
     return keys != null && !keys.isEmpty();
   }
 
+  @Test
+  @DisplayName("OTP request fails with invalid phone number format")
+  void testOtpRequest_InvalidPhoneNumber() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(Map.of("phoneNumber", "not-a-phone", "email", "valid@example.com"))
+        .when()
+        .post(AUTH_BASE + "/request-otp")
+        .then()
+        .statusCode(400);
+  }
+
+  @Test
+  @DisplayName("OTP request fails with invalid email format")
+  void testOtpRequest_InvalidEmail() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(Map.of("phoneNumber", "+14155550200", "email", "not-an-email"))
+        .when()
+        .post(AUTH_BASE + "/request-otp")
+        .then()
+        .statusCode(400);
+  }
+
+  @Test
+  @DisplayName("OTP request fails with missing required fields")
+  void testOtpRequest_MissingFields() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(Map.of())
+        .when()
+        .post(AUTH_BASE + "/request-otp")
+        .then()
+        .statusCode(400);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(Map.of("phoneNumber", "+14155550201"))
+        .when()
+        .post(AUTH_BASE + "/request-otp")
+        .then()
+        .statusCode(400);
+  }
+
+  @Test
+  @DisplayName("OTP verification fails when no OTP was requested")
+  void testOtpVerification_NoOtpRequested() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(Map.of("phoneNumber", "+14155550300", "otp", "123456"))
+        .when()
+        .post(AUTH_BASE + "/verify-otp")
+        .then()
+        .statusCode(401)
+        .body("error", containsString("No OTP found"));
+  }
+
+  @Test
+  @DisplayName("Logout invalidates session and blocks subsequent authenticated requests")
+  void testLogoutSuccess() {
+    String phone = "+14155550108";
+    String recipientPhone = "+14155550777";
+    String sessionId = authenticateUser(phone);
+
+    createDirectConversation(phone, recipientPhone);
+
+    given()
+        .cookie(SESSION_COOKIE, sessionId)
+        .when()
+        .get("/api/messages/{recipientId}", recipientPhone)
+        .then()
+        .statusCode(200);
+
+    given()
+        .cookie(SESSION_COOKIE, sessionId)
+        .when()
+        .post(AUTH_BASE + "/logout")
+        .then()
+        .statusCode(200);
+
+    given()
+        .cookie(SESSION_COOKIE, sessionId)
+        .when()
+        .get("/api/messages/{recipientId}", recipientPhone)
+        .then()
+        .statusCode(401);
+  }
+
+  @Test
+  @DisplayName("CSRF token endpoint is accessible without authentication")
+  void testCsrfTokenEndpoint() {
+    given().when().get(AUTH_BASE + "/csrf").then().statusCode(200);
+  }
+
   private void expireSessionNow(String sessionId) {
     if (redisTemplate == null) {
       return;

@@ -33,6 +33,7 @@ export async function apiCall<T>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     })
 

@@ -3,16 +3,15 @@
 import React from "react"
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { apiCall, setAuthToken, getAuthToken, getUserId, setUserId, setUserPhone } from './api'
-import { config } from './config'
-import type { User, AuthResponse } from './types'
+import { apiCall, setUserPhone, getUserPhone } from './api'
+import type { User } from './types'
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  requestOTP: (phoneNumber: string, email: string) => Promise<{ otpId: string }>
-  verifyOTP: (otpId: string, otp: string) => Promise<void>
+  requestOTP: (phoneNumber: string, email: string) => Promise<void>
+  verifyOTP: (phoneNumber: string, otp: string) => Promise<void>
   logout: () => void
 }
 
@@ -24,14 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check if user is already authenticated on mount
   useEffect(() => {
-    const token = getAuthToken()
-    const userId = getUserId()
+    const phone = getUserPhone()
 
-    if (token && userId) {
-      // Could fetch user details here
+    if (phone) {
       setUser({
-        id: userId,
-        phoneNumber: localStorage.getItem('user_phone') || '',
+        id: phone,
+        phoneNumber: phone,
         status: 'online',
       })
     }
@@ -39,39 +36,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const requestOTP = useCallback(async (phoneNumber: string, email: string) => {
-
-    const response = await apiCall<{ otpId: string }>('/api/v1/auth/request-otp', {
+    await apiCall<{ message: string }>('/api/v1/auth/request-otp', {
       method: 'POST',
       body: JSON.stringify({ phoneNumber, email }),
     })
-
-    return response
   }, [])
 
-  const verifyOTP = useCallback(async (otpId: string, otp: string) => {
-
-    const response = await apiCall<AuthResponse>('/api/v1/auth/verify-otp', {
+  const verifyOTP = useCallback(async (phoneNumber: string, otp: string) => {
+    await apiCall<{ authenticated: boolean; message: string }>('/api/v1/auth/verify-otp', {
       method: 'POST',
-      body: JSON.stringify({ otpId, otp }),
+      body: JSON.stringify({ phoneNumber, otp }),
     })
 
-    setAuthToken(response.token)
-    setUserId(response.user.id)
-    setUserPhone(response.user.phoneNumber)
+    setUserPhone(phoneNumber)
 
     setUser({
-      id: response.user.id,
-      phoneNumber: response.user.phoneNumber,
-      displayName: response.user.displayName,
+      id: phoneNumber,
+      phoneNumber,
       status: 'online',
     })
-
-
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_id')
+  const logout = useCallback(async () => {
+    try {
+      await apiCall('/api/v1/auth/logout', { method: 'POST' })
+    } catch {
+      // Ignore logout API errors
+    }
     localStorage.removeItem('user_phone')
     setUser(null)
   }, [])

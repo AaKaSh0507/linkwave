@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/auth-context'
 
 interface LoginFormProps {
-  onOTPSent: (otpId: string, phoneNumber: string) => void
+  onOTPSent: (phoneNumber: string) => void
 }
 
 export function LoginForm({ onOTPSent }: LoginFormProps) {
@@ -26,8 +26,8 @@ export function LoginForm({ onOTPSent }: LoginFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await requestOTP(phoneNumber, email)
-      onOTPSent(response.otpId, phoneNumber)
+      await requestOTP(phoneNumber, email)
+      onOTPSent(phoneNumber)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP')
     } finally {

@@ -8,9 +8,10 @@ import org.springframework.context.annotation.Configuration;
 public class AuthConfig {
 
   private int otpLength = 6;
-  private int ttlSeconds = 300; //
+  private int ttlSeconds = 300;
   private int throttleMaxRequests = 3;
   private int throttleWindowSeconds = 600;
+  private String fixedValue = "";
 
   public int getOtpLength() {
     return otpLength;
@@ -42,5 +43,13 @@ public class AuthConfig {
 
   public void setThrottleWindowSeconds(int throttleWindowSeconds) {
     this.throttleWindowSeconds = throttleWindowSeconds;
+  }
+
+  public String getFixedValue() {
+    return fixedValue;
+  }
+
+  public void setFixedValue(String fixedValue) {
+    this.fixedValue = fixedValue;
   }
 }

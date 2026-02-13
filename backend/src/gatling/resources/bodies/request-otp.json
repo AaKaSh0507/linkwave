@@ -1,0 +1,4 @@
+{
+  "phoneNumber": "#{phone}",
+  "email": "load-#{userId}@example.com"
+}

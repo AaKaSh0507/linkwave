@@ -10,13 +10,12 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useAuth } from '@/lib/auth-context'
 
 interface OTPVerificationProps {
-  otpId: string
   phoneNumber: string
   onVerified: () => void
   onBack: () => void
 }
 
-export function OTPVerification({ otpId, phoneNumber, onVerified, onBack }: OTPVerificationProps) {
+export function OTPVerification({ phoneNumber, onVerified, onBack }: OTPVerificationProps) {
   const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -52,7 +51,7 @@ export function OTPVerification({ otpId, phoneNumber, onVerified, onBack }: OTPV
     setIsLoading(true)
 
     try {
-      await verifyOTP(otpId, otp)
+      await verifyOTP(phoneNumber, otp)
       onVerified()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')

@@ -117,6 +117,7 @@ linkwave:
       ttl-seconds: ${OTP_TTL_SECONDS:300}
       throttle-max-requests: ${OTP_THROTTLE_MAX_REQUESTS:3}
       throttle-window-seconds: ${OTP_THROTTLE_WINDOW_SECONDS:600}
+      fixed-value: ${OTP_FIXED_VALUE:}
 
   mail:
     host: ${MAIL_HOST:}

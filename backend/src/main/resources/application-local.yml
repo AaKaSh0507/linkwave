@@ -30,3 +30,4 @@ linkwave:
     port: ${MAIL_PORT:1025}
     from: no-reply@linkwave.local
     tls-enabled: ${MAIL_TLS_ENABLED:false}
+    dev-mode: ${LINKWAVE_MAIL_DEV_MODE:true}

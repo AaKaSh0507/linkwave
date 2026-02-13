@@ -1,0 +1,55 @@
+name: load-test
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  gatling-load-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Grant execute permission
+        run: chmod +x ./gradlew
+
+      - name: Compile Gatling simulations
+        run: ./gradlew gatlingClasses --console=plain
+
+      - name: Run AuthenticationLoadTest
+        run: ./gradlew gatlingRun-simulations.AuthenticationSimulation --console=plain
+        continue-on-error: true
+
+      - name: Run WebSocketLoadTest
+        run: ./gradlew gatlingRun-simulations.WebSocketLoadTest --console=plain
+        continue-on-error: true
+
+      - name: Run MessagingLoadTest
+        run: ./gradlew gatlingRun-simulations.MessagingLoadTest --console=plain
+        continue-on-error: true
+
+      - name: Run PresenceLoadTest
+        run: ./gradlew gatlingRun-simulations.PresenceLoadTest --console=plain
+        continue-on-error: true
+
+      - name: Run ComprehensiveLoadTest
+        run: ./gradlew gatlingRun-simulations.ComprehensiveLoadTest --console=plain
+        continue-on-error: true
+
+      - name: Archive Gatling reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: gatling-reports
+          path: backend/build/reports/gatling/**

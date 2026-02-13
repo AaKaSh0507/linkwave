@@ -1,0 +1,7 @@
+{
+  "event": "chat.send",
+  "to": "#{roomId}",
+  "payload": {
+    "body": "#{messageBody}"
+  }
+}

@@ -73,6 +73,10 @@ public class OtpService {
   }
 
   private String generateOtp() {
+    String fixed = authConfig.getFixedValue();
+    if (fixed != null && !fixed.isBlank()) {
+      return fixed;
+    }
     int otpLength = authConfig.getOtpLength();
     int bound = (int) Math.pow(10, otpLength);
     int otp = secureRandom.nextInt(bound);

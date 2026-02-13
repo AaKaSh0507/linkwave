@@ -27,9 +27,11 @@ public class MailConfig {
 
     Properties props = mailSender.getJavaMailProperties();
     props.put("mail.transport.protocol", "smtp");
-    props.put("mail.smtp.auth", "true");
+    boolean hasCredentials =
+        emailConfig.getUsername() != null && !emailConfig.getUsername().isBlank();
+    props.put("mail.smtp.auth", String.valueOf(hasCredentials));
     props.put("mail.smtp.starttls.enable", String.valueOf(emailConfig.isTlsEnabled()));
-    props.put("mail.smtp.starttls.required", "true");
+    props.put("mail.smtp.starttls.required", String.valueOf(emailConfig.isTlsEnabled()));
     props.put("mail.smtp.connectiontimeout", "5000");
     props.put("mail.smtp.timeout", "5000");
     props.put("mail.smtp.writetimeout", "5000");

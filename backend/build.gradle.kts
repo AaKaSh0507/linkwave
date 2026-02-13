@@ -4,6 +4,7 @@ plugins {
     jacoco
     id("org.springframework.boot") version "3.4.1"
     id("io.spring.dependency-management") version "1.1.7"
+    id("io.gatling.gradle") version "3.10.3"
 }
 
 group = "com.linkwave"
@@ -72,6 +73,14 @@ dependencies {
     testImplementation("org.awaitility:awaitility:4.2.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly("com.h2database:h2")
+
+    gatlingImplementation("io.gatling:gatling-http-java:3.10.3")
+    gatlingImplementation("io.gatling.highcharts:gatling-charts-highcharts:3.10.3")
+}
+
+gatling {
+    logLevel = "WARN"
+    logHttp = io.gatling.gradle.LogHttp.FAILURES
 }
 
 tasks.withType<Test> {

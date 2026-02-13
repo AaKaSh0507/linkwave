@@ -12,7 +12,6 @@ export default function AuthPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuth()
   const [step, setStep] = useState<AuthStep>('login')
-  const [otpId, setOtpId] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
 
   // Redirect if already authenticated
@@ -46,15 +45,13 @@ export default function AuthPage() {
           {/* Auth Forms */}
           {step === 'login' ? (
             <LoginForm
-              onOTPSent={(id, phone) => {
-                setOtpId(id)
+              onOTPSent={(phone) => {
                 setPhoneNumber(phone)
                 setStep('otp')
               }}
             />
           ) : (
             <OTPVerification
-              otpId={otpId}
               phoneNumber={phoneNumber}
               onVerified={() => {
                 router.push('/chat')

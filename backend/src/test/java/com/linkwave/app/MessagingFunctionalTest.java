@@ -324,6 +324,196 @@ class MessagingFunctionalTest extends FunctionalTestBase {
     return new KafkaConsumer<>(props);
   }
 
+  @Test
+  @DisplayName("Send message to non-existent room returns error")
+  void testSendMessage_InvalidRoom() {
+    String user1 = "+14155560601";
+    authenticateUser(user1);
+
+    org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> chatService.sendMessage("non-existent-room-id", user1, "Should fail"));
+  }
+
+  @Test
+  @DisplayName("Send message by non-member of room is rejected")
+  void testSendMessage_NonMember() {
+    String user1 = "+14155560701";
+    String user2 = "+14155560702";
+    String outsider = "+14155560703";
+
+    String user1Session = authenticateUser(user1);
+    authenticateUser(user2);
+    authenticateUser(outsider);
+
+    String roomId = createDirectRoom(user1Session, user2);
+
+    org.junit.jupiter.api.Assertions.assertThrows(
+        SecurityException.class,
+        () -> chatService.sendMessage(roomId, outsider, "Intruder message"));
+  }
+
+  @Test
+  @DisplayName("Message history without authentication returns 401")
+  void testMessageHistory_Unauthorized() {
+    given().when().get("/api/messages/{recipientId}", "+14155560801").then().statusCode(401);
+  }
+
+  @Test
+  @DisplayName("Group room creation and messaging flow succeeds")
+  void testGroupRoomMessaging() {
+    String user1 = "+14155560901";
+    String user2 = "+14155560902";
+    String user3 = "+14155560903";
+
+    String user1Session = authenticateUser(user1);
+    authenticateUser(user2);
+    authenticateUser(user3);
+
+    Response response =
+        given()
+            .cookie(SESSION_COOKIE, user1Session)
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "Test Group", "members", List.of(user1, user2, user3)))
+            .when()
+            .post(CHAT_BASE + "/rooms/group")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    String groupRoomId = response.jsonPath().getString("id");
+    assertNotNull(groupRoomId);
+    assertEquals("GROUP", response.jsonPath().getString("type"));
+
+    chatService.sendMessage(groupRoomId, user1, "Hello group!");
+
+    await()
+        .atMost(5, TimeUnit.SECONDS)
+        .until(
+            () ->
+                ((Number)
+                            jdbcTemplate.queryForObject(
+                                "SELECT COUNT(*) FROM chat_messages WHERE room_id = ?",
+                                Long.class,
+                                groupRoomId))
+                        .longValue()
+                    >= 1L);
+
+    ChatMessageEntity persisted =
+        chatMessageRepository
+            .findById(
+                jdbcTemplate.queryForObject(
+                    "SELECT id FROM chat_messages WHERE room_id = ? LIMIT 1",
+                    String.class,
+                    groupRoomId))
+            .orElseThrow();
+
+    assertEquals("Hello group!", persisted.getBody());
+    assertEquals(user1, persisted.getSenderPhone());
+  }
+
+  @Test
+  @DisplayName("User room listing returns all rooms the user belongs to")
+  void testRoomListing() {
+    String user1 = "+14155561001";
+    String user2 = "+14155561002";
+    String user3 = "+14155561003";
+
+    String user1Session = authenticateUser(user1);
+    authenticateUser(user2);
+    authenticateUser(user3);
+
+    createDirectRoom(user1Session, user2);
+    createDirectRoom(user1Session, user3);
+
+    Response response =
+        given()
+            .cookie(SESSION_COOKIE, user1Session)
+            .when()
+            .get(CHAT_BASE + "/rooms")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    List<Map<String, Object>> rooms = response.jsonPath().getList("");
+    assertTrue(rooms.size() >= 2, "User should have at least 2 rooms");
+  }
+
+  @Test
+  @DisplayName("Room members endpoint returns correct member list")
+  void testRoomMembers() {
+    String user1 = "+14155561101";
+    String user2 = "+14155561102";
+
+    String user1Session = authenticateUser(user1);
+    authenticateUser(user2);
+
+    String roomId = createDirectRoom(user1Session, user2);
+
+    Response response =
+        given()
+            .cookie(SESSION_COOKIE, user1Session)
+            .when()
+            .get(CHAT_BASE + "/rooms/{roomId}/members", roomId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    List<Map<String, Object>> members = response.jsonPath().getList("");
+    assertEquals(2, members.size());
+
+    List<String> phoneNumbers = members.stream().map(m -> (String) m.get("phoneNumber")).toList();
+    assertTrue(phoneNumbers.contains(user1));
+    assertTrue(phoneNumbers.contains(user2));
+  }
+
+  @Test
+  @DisplayName("Room messages endpoint with pagination returns correct page")
+  void testRoomMessagesEndpoint() {
+    String user1 = "+14155561201";
+    String user2 = "+14155561202";
+
+    String user1Session = authenticateUser(user1);
+    authenticateUser(user2);
+
+    String roomId = createDirectRoom(user1Session, user2);
+
+    for (int i = 1; i <= 5; i++) {
+      chatService.sendMessage(roomId, user1, "room-endpoint-msg-" + i);
+    }
+
+    await()
+        .atMost(5, TimeUnit.SECONDS)
+        .until(
+            () ->
+                ((Number)
+                            jdbcTemplate.queryForObject(
+                                "SELECT COUNT(*) FROM chat_messages WHERE room_id = ?",
+                                Long.class,
+                                roomId))
+                        .longValue()
+                    >= 5L);
+
+    Response response =
+        given()
+            .cookie(SESSION_COOKIE, user1Session)
+            .queryParam("page", 0)
+            .queryParam("size", 3)
+            .when()
+            .get(CHAT_BASE + "/rooms/{roomId}/messages", roomId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    List<Map<String, Object>> messages = response.jsonPath().getList("messages");
+    assertEquals(3, messages.size());
+    assertTrue(response.jsonPath().getLong("total") >= 5);
+  }
+
   @SuppressWarnings("unchecked")
   private Map<String, OtpMetadata> getOtpStore() {
     try {

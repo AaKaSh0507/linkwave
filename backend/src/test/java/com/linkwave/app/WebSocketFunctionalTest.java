@@ -306,6 +306,65 @@ class WebSocketFunctionalTest extends FunctionalTestBase {
     }
   }
 
+  @Test
+  void testWebSocketPingPong() throws Exception {
+    String user = "+14155570113";
+    String sessionId = authenticateUser(user);
+
+    TestWebSocketClient client = connectClient(sessionId);
+    try {
+      assertTrue(client.isOpen());
+
+      client.send("{\"event\":\"ping\"}");
+
+      await()
+          .atMost(5, TimeUnit.SECONDS)
+          .until(() -> client.containsMessagePart("\"event\":\"pong\""));
+
+      assertTrue(client.containsMessagePart("timestamp"));
+    } finally {
+      closeQuietly(client);
+    }
+  }
+
+  @Test
+  void testWebSocketInvalidMessageFormat() throws Exception {
+    String user = "+14155570114";
+    String sessionId = authenticateUser(user);
+
+    TestWebSocketClient client = connectClient(sessionId);
+    try {
+      assertTrue(client.isOpen());
+
+      client.send("this is not valid json");
+
+      await()
+          .atMost(5, TimeUnit.SECONDS)
+          .until(() -> !client.isOpen() || !client.getErrors().isEmpty());
+    } finally {
+      closeQuietly(client);
+    }
+  }
+
+  @Test
+  void testWebSocketConnectionAck() throws Exception {
+    String user = "+14155570115";
+    String sessionId = authenticateUser(user);
+
+    TestWebSocketClient client = connectClient(sessionId);
+    try {
+      assertTrue(client.isOpen());
+
+      await()
+          .atMost(5, TimeUnit.SECONDS)
+          .until(() -> client.containsMessagePart("\"event\":\"connection.ack\""));
+
+      assertTrue(client.containsMessagePart("connected"));
+    } finally {
+      closeQuietly(client);
+    }
+  }
+
   private List<ChatMessageEntity> latestMessages(String roomId, int size) {
     return chatMessageRepository
         .findByRoomOrderBySentAtDesc(
